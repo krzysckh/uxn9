@@ -1,0 +1,8 @@
+*.~undo-tree~
+*.rom
+*.out
+*.tal
+*.[0-9]
+*.o
+*.swp
+uxn9
