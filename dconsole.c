@@ -4,15 +4,19 @@
 #define CONSOLE_ERROR 0x19
 
 static u16int
-console_write(u16int ch)
+console_write(u8int getp, u16int ch)
 {
+  if (getp)
+    return 0;
   write(1, ((u8int*)&ch), 1);
   return 0;
 }
 
 static u16int
-console_error(u16int ch)
+console_error(u8int getp, u16int ch)
 {
+  if (getp)
+    return 0;
   write(2, ((u8int*)&ch), 1);
   return 0;
 }

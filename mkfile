@@ -3,6 +3,7 @@
 TARG=uxn9
 OFILES=\
   uxn9.$O \
+  dsystem.$O \
   dconsole.$O \
   dscreen.$O \
 

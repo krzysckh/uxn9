@@ -40,12 +40,12 @@ static u8int *bg = 0;
 static u8int *sbuf = 0;
 static Image *img = nil;
 
-static u8int colors[] = {
+u8int colors[] = {
   /*B   G     R */
   0x00, 0x00, 0x00,
-  0x00, 0x00, 0xff,
-  0x00, 0xff, 0x00,
-  0xff, 0x00, 0x00,
+  0xff, 0xff, 0xff,
+  0x00, 0x00, 0x00,
+  0xff, 0xff, 0xff,
 };
 
 /* draw bg & fg onto sbuf */
@@ -128,57 +128,57 @@ eresized(int new)
 
 
 static u16int
-screen_set_width(u16int w)
+screen_set_width(u8int getp, u16int w)
 {
-  if (w == 0xffff)
-    return w;
+  if (getp)
+    return window_width;
   window_width = w;
   update_window_size();
   return w;
 }
 
 static u16int
-screen_set_height(u16int h)
+screen_set_height(u8int getp, u16int h)
 {
-  if (h == 0xffff)
-    return h;
+  if (getp)
+    return window_height;
   window_height = h;
   update_window_size();
   return h;
 }
 
 static u16int
-screen_set_x(u16int x)
+screen_set_x(u8int getp, u16int x)
 {
-  if (x == 0xffff)
-    return x;
+  if (getp)
+    return current_x;
   current_x = x;
   return x;
 }
 
 static u16int
-screen_set_y(u16int y)
+screen_set_y(u8int getp, u16int y)
 {
-  if (y == 0xffff)
-    return y;
+  if (getp)
+    return current_y;
   current_y = y;
   return y;
 }
 
 static u16int
-screen_set_vec(u16int vec)
+screen_set_vec(u8int getp, u16int vec)
 {
-  if (vec == 0xffff)
-    return vec;
+  if (getp)
+    return screen_vector;
   screen_vector = vec;
   return vec;
 }
 
 static u16int
-screen_set_addr(u16int addr)
+screen_set_addr(u8int getp, u16int addr)
 {
-  if (addr == 0xffff)
-    return addr;
+  if (getp)
+    return screen_addr;
   screen_addr = addr;
   return addr;
 }
@@ -187,8 +187,10 @@ screen_set_addr(u16int addr)
 //                        \_____/- color
 
 static u16int
-screen_sprite(u16int dat)
+screen_sprite(u8int getp, u16int dat)
 {
+  if (getp)
+    return 0xff;
   uint i, j;
   u8int _2bpp = 0b10000000&dat,
         layer = 0b1000000&dat,
@@ -221,8 +223,10 @@ screen_sprite(u16int dat)
 //                            \_/- color
 
 static u16int
-screen_pixel(u16int dat)
+screen_pixel(u8int getp, u16int dat)
 {
+  if (getp)
+    return 0xff;
   int i, j;
   u8int *target,
         color = 0b11&dat,

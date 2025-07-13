@@ -4,7 +4,7 @@
 #include <u.h>
 #include <libc.h>
 
-typedef u16int (*Dev)(u16int);
+typedef u16int (*Dev)(u8int, u16int);
 
 typedef struct Uxn
 {
@@ -14,6 +14,9 @@ typedef struct Uxn
 } Uxn;
 
 void vm(Uxn *);
+
+/* system */
+void init_system_device(Uxn *);
 
 /* console */
 void init_console_device(Uxn *);

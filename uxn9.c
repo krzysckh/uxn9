@@ -151,12 +151,12 @@ vm(Uxn *uxn)
         if (SHORTP(op)) uxn->mem[pt] = v>>8, uxn->mem[pt+1] = v; else uxn->mem[pt] = v;
         NEXT(1); }
     case 0x16: {u16int dev = IT(0, STACK(op, uxn), STACKPT(op, uxn)), res;
-        if (uxn->devices[dev]) res = uxn->devices[dev](0xffff); else res = 0;
+        if (uxn->devices[dev]) res = uxn->devices[dev](1, 0); else res = 0;
         UN(op, STACKPT(op, uxn), 1);
         P(res, op, uxn);
         NEXT(1);}
     case 0x17: {u16int dev = IT(0, STACK(op, uxn), STACKPT(op, uxn)), val = SHORTP(op) ? IT2_(0, STACK(op, uxn), STACKPT(op, uxn)) : IT(1, STACK(op, uxn), STACKPT(op, uxn));
-        if (uxn->devices[dev]) uxn->devices[dev](val); /*else sysfatal("unknown device %02x", dev); */
+        if (uxn->devices[dev]) uxn->devices[dev](0, val); /*else sysfatal("unknown device %02x", dev); */
         UN(op, STACKPT(op, uxn), 2+SHORTP(op));
         NEXT(1);}
     case 0x18: BINOP(+, op, uxn);
@@ -198,6 +198,7 @@ main(int argc, char **argv)
   print("read %d bytes\n", rd);
   close(fd);
 
+  init_system_device(&uxn);
   init_console_device(&uxn);
   init_screen_device(&uxn);
 
