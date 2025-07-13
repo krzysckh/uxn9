@@ -84,6 +84,7 @@ print_stacks(Uxn *uxn)
 
 #define NEXT(n) {uxn->pc += n; break;}
 #define JMP(n) {uxn->pc = n; break;}
+#define IMM2(uxn) (uxn->mem[uxn->pc+1]<<8|uxn->mem[uxn->pc+2])
 
 #define BINOP(B, op, uxn) { OPCn(2+(2*SHORTP(op)), op, uxn, { RES = PEEKb(op, uxn) B PEEK(op, uxn); }); NEXT(1) };
 #define OP8(B, op, uxn) {u16int a = PEEK(op, uxn), b = PEEKb(op, uxn); UN(op, STACKPT(op, uxn), 2+(2*SHORTP(op))); PUSH(a B b, STACK(op, uxn), STACKPT(op, uxn)); NEXT(1);}
@@ -97,6 +98,12 @@ vm(Uxn *uxn)
     op = uxn->mem[uxn->pc];
     // print_stacks(uxn);
     // print("[%04x] OPC: %02x, opcod: %02x\n", uxn->pc, op&0x1f, op);
+    switch (op) { /* IMMEDIATE dispatch */
+    case 0x20: {u8int a = IT(0, STACK(op, uxn), STACKPT(op, uxn)); UN(op, STACKPT(op, uxn), 1); if (!a) NEXT(3); /* else fallthrough */}
+    case 0x40: {JMP(IMM2(uxn));}
+    case 0x60: {u16int pt = IMM2(uxn); PUSH2(pt, uxn->rst, &uxn->rstp); JMP(pt);}
+    /* LIT handled later */
+    }
     switch (op&0x1f) {
     case 0x00: if (KEEPP(op)) LIT(op, uxn) else return;
     case 0x01: OPCn(1+SHORTP(op), op, uxn, { RES = PEEK(op, uxn) + 1; }); NEXT(1);
