@@ -202,18 +202,14 @@ screen_sprite(u8int getp, u16int dat)
 
   if (_2bpp)
     sysfatal("2 bit per pixel not implemented");
-  if (flipxp)
-    sysfatal("flipx not implemented");
-  if (flipyp)
-    sysfatal("flipy not implemented");
 
   /* 1bpp */
   for (i = 0; i < 8; ++i) {
     if (current_y + i >= window_height) break;
     for (j = 0; j < 8; ++j) {
       if (current_x + j >= window_width) break;
-      cur = ((current_uxn->mem[screen_addr + i])>>7-j)&0b1;
-      target[((current_y+i)*window_width)+current_x+j] = BLEND(cur, color);
+      cur = ((current_uxn->mem[screen_addr + i])>>(flipxp?j:7-j))&0b1;
+      target[((current_y+(flipyp?7-i:i))*window_width)+current_x+j] = BLEND(cur, color);
     }
   }
   return 0;

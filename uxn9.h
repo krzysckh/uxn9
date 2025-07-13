@@ -25,4 +25,7 @@ void init_console_device(Uxn *);
 void init_screen_device(Uxn *);
 void screen_main_loop(Uxn *);
 
+/* file */
+void init_file_device(Uxn *);
+
 #endif /* __UXN9_H */

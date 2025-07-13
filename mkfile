@@ -5,6 +5,7 @@ TARG=uxn9
 OFILES=\
   uxn9.$O \
   dsystem.$O \
+  dfile.$O \
   dconsole.$O \
   dscreen.$O \
 
