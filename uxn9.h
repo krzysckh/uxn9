@@ -1,8 +1,16 @@
 #ifndef __UXN9_H
 #define __UXN9_H
 
+// #define UXN9_FATAL_NODEVICE /* sorry */
+#define TARGET_FPS 60
+
 #include <u.h>
 #include <libc.h>
+#include <draw.h>
+#include <cursor.h>
+#include <thread.h>
+#include <mouse.h>
+#include <keyboard.h>
 
 typedef u16int (*Dev)(u8int, u16int);
 
@@ -27,5 +35,9 @@ void screen_main_loop(Uxn *);
 
 /* file */
 void init_file_device(Uxn *);
+
+/* mouse */
+void init_mouse_device(Uxn *);
+void update_mouse_state(int);
 
 #endif /* __UXN9_H */

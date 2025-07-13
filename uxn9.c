@@ -62,7 +62,7 @@ static void
 usage(void)
 {
   fprint(2, "usage: %s file.rom\n", argv0);
-  sysfatal("usage");
+  threadexitsall("usage");
 }
 
 static void
@@ -70,8 +70,8 @@ print_stack(char *name, u8int *st, u8int p)
 {
   u16int i = 0;
   for (; i < p; ++i)
-    print("%02x ", st[i]);
-  print("|(%d) %s\n", p, name);
+    fprint(2, "%02x ", st[i]);
+  fprint(2, "|(%d) %s\n", p, name);
 }
 
 void
@@ -153,6 +153,7 @@ loop:
       NEXT(1);}
   case 0x17: {u16int dev = IT(0, S, Q), val = _2 ? IT2_(0, S, Q) : IT(1, S, Q);
       UN(op, Q, 2+_2);
+      // print("DEO %02x\n", dev);
       if (uxn->devices[dev]) uxn->devices[dev](0, val);
 #ifdef UXN9_FATAL_NODEVICE
       else sysfatal("unknown device %02x", dev);
@@ -179,11 +180,13 @@ loop:
 /* FIXME: move to some header */
 extern char **console_argv;
 
+/* note to future self: cannot alloc big structs on stack with libthread */
+
 void
-main(int argc, char **argv)
+threadmain(int argc, char **argv)
 {
-  Uxn uxn = {0};
-  u8int mem[1<<16] = {0};
+  Uxn *uxn = malloc(sizeof(Uxn));
+  u8int *mem = malloc(1<<16);
   int fd;
 
   ARGBEGIN {
@@ -196,18 +199,19 @@ main(int argc, char **argv)
   console_argv = argv+1;
   if (fd < 0)
     sysfatal("couldn't read file %s", argv[0]);
-  read(fd, mem+0x100, (1<<16)-0x100);
+  int rd = read(fd, mem+0x100, (1<<16)-0x100);
   close(fd);
 
-  init_system_device(&uxn);
-  init_console_device(&uxn);
-  init_screen_device(&uxn);
+  init_system_device(uxn);
+  init_console_device(uxn);
+  init_screen_device(uxn);
+  init_mouse_device(uxn);
 
-  uxn.mem = mem;
-  uxn.pc = 0x100;
+  uxn->mem = mem;
+  uxn->pc = 0x100;
 
-  vm(&uxn);
-  screen_main_loop(&uxn);
+  vm(uxn);
+  screen_main_loop(uxn);
 
-  exits(nil);
+  threadexitsall(nil);
 }

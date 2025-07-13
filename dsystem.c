@@ -65,8 +65,8 @@ system_state(u8int getp, u16int dat)
   if (getp)
     return 0;
   if (0x7f&dat)
-    exits("non-normal termination");
-  exits(nil);
+    threadexitsall("non-normal termination");
+  threadexitsall(nil);
   return 0;
 }
 
