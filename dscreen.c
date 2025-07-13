@@ -273,7 +273,8 @@ init_screen_device(Uxn *uxn)
 void
 screen_main_loop(Uxn *uxn)
 {
-  u16int run = 0x0fff;
+  //u16int run = 0x0fff;
+  u16int run = 0x000f;
   current_uxn = uxn;
 
   vlong target_timeout_ns = 1000000000/60, was, is;
