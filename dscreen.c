@@ -10,8 +10,8 @@
 #define SCREEN_PIXEL  0x2e
 #define SCREEN_SPRITE 0x2f
 
-#define INITIAL_WINDOW_WIDTH 400
-#define INITIAL_WINDOW_HEIGHT 300
+#define INITIAL_WINDOW_WIDTH (64*8)
+#define INITIAL_WINDOW_HEIGHT (40*8)
 
 #define MIN(a,b) ((a)<(b)?(a):(b))
 
@@ -208,7 +208,7 @@ screen_set_addr(u8int getp, u16int addr)
 static u16int
 screen_sprite(u8int getp, u16int dat)
 {
-  uint i, j;
+  uint i, j, A, drawN = autoN+1;
   u8int _2bpp = 0b10000000&dat,
         layer = 0b1000000&dat,
         flipyp = 0b100000&dat,
@@ -217,20 +217,42 @@ screen_sprite(u8int getp, u16int dat)
         *target = layer ? fg : bg,
         cur;
 
+  s32int x = current_x, y = current_y;
+
+  /*
+  if (autoX && autoY)
+    sysfatal("autoX and autoY");
+    */
+
   if (getp)
     return 0xff;
 
-  for (i = 0; i < 8; ++i) {
-    if (current_y + i >= window_height) break;
-    for (j = 0; j < 8; ++j) {
-      if (current_x + j >= window_width) break;
-      if (_2bpp)
-        cur = (((current_uxn->mem[screen_addr + i*2]<<8)|current_uxn->mem[screen_addr + 1 + i*2])>>(flipxp?j*2:(7-j)*2))&0b11;
-      else
-        cur = ((current_uxn->mem[screen_addr + i])>>(flipxp?j:7-j))&0b1;
-      target[((current_y+(flipyp?7-i:i))*window_width)+current_x+j] = BLEND(cur, color);
+  for (A = 0; A < drawN; ++A) {
+    /* draw sprite */
+    for (i = 0; i < 8; ++i) {
+      if (y + i >= window_height) break;
+      for (j = 0; j < 8; ++j) {
+        if (x + j >= window_width) break;
+        if (_2bpp) {
+          cur = (((current_uxn->mem[screen_addr + i]>>(flipxp?j:7-j))&1))|(((current_uxn->mem[screen_addr + i + 8]>>(flipxp?j:7-j))&1)<<1);
+          if (cur > 3)
+            sysfatal("bad cur");
+        } else
+          cur = ((current_uxn->mem[screen_addr + i])>>(flipxp?j:7-j))&0b1;
+        if (cur || color % 5) /* why */
+          target[((y+(flipyp?7-i:i))*window_width)+x+j] = BLEND(cur, color);
+      }
     }
+    /* end draw sprite */
+
+    if (autoX) y = flipyp? y-8 : y+8;
+    if (autoY) x = flipxp? x-8 : x+8;
+    if (autoA) screen_addr += _2bpp ? 16 : 8;
   }
+
+  if (autoX) current_x = flipxp ? x-8 : x+8;
+  if (autoY) current_y = flipyp ? y-8 : y+8;
+
   return 0;
 }
 
@@ -241,17 +263,16 @@ static u16int
 screen_pixel(u8int getp, u16int dat)
 {
   int i, j;
-  u8int *target,
-        color = 0b11&dat,
+  u8int color = 0b11&dat,
         fillp = 0b10000000&dat,
         layer = 0b1000000&dat,
         flipxp = 0b100000&dat,
-        flipyp = 0b10000&dat;
+        flipyp = 0b10000&dat,
+        *target = layer ? fg : bg;
 
   if (getp)
     return 0xff;
 
-  target = layer ? fg : bg;
 
   if (fillp) {
     for (i = current_y; flipyp ? i >=0 : i < window_height; flipyp ? i-- : i++)
@@ -270,10 +291,10 @@ screen_auto(u8int getp, u16int dat)
 {
   if (getp)
     sysfatal("get auto");
-  autoN = dat&0xf0;
+  autoN = (dat&0xf0)>>4;
   autoX = dat&1;
-  autoY = dat&1<<1;
-  autoA = dat&1<<2;
+  autoY = dat&(1<<1);
+  autoA = dat&(1<<2);
   return 0;
 }
 
@@ -326,10 +347,8 @@ screen_main_loop(Uxn *uxn)
   u16int run = 0x00ff;
   current_uxn = uxn;
 
-  print("BEFORE CENTER\n");
   center_window();
   update_window_size();
-  print("OK CENTER\n");
 
   Cursor *c = mallocz(sizeof(Cursor), 1);
   setcursor(mouse, c);
