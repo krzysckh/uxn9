@@ -13,6 +13,8 @@
 #define INITIAL_WINDOW_WIDTH 400
 #define INITIAL_WINDOW_HEIGHT 300
 
+#define MIN(a,b) ((a)<(b)?(a):(b))
+
 blending[4][16] = {
  {0, 0, 0, 0, 1, 0, 1, 1, 2, 2, 0, 2, 3, 3, 3, 0},
  {0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3},
@@ -61,6 +63,7 @@ update_screen_buffer(void)
 {
   uint i, j, pt;
   u8int sel;
+
   for (i = 0; i < window_height; ++i) {
     for (j = 0; j < window_width; ++j) {
       pt = (i*window_width)+j;
@@ -98,17 +101,6 @@ update_window_size(void)
   while (getwindow(display, Refnone) != 1)
     ;
 
-  if (sbuf) free(sbuf);
-  if (fg)   free(fg);
-  if (bg)   free(bg);
-
-  sbuf = mallocz(window_width*window_height*3, 1);
-  bg   = mallocz(window_width*window_height, 1);
-  fg   = mallocz(window_width*window_height, 1);
-
-  if (fg == nil || bg == nil || sbuf == nil)
-    sysfatal("malloc");
-
   r = Rect(0, 0, window_width, window_height);
   if (img)
     freeimage(img);
@@ -127,10 +119,19 @@ set_new_window_size(void)
 
   // print("new window size: %dx%d\n", window_width, window_height);
 
-  if (wctl_fd) {
+  if (wctl_fd)
     fprint(wctl_fd, "resize -r %d %d %d %d\n", xr, yr, xr+window_width, yr+window_height);
-    update_window_size();
-  }
+
+  if (sbuf != nil) free(sbuf);
+  if (fg != nil)   free(fg);
+  if (bg != nil)   free(bg);
+
+  sbuf = mallocz(window_width*window_height*3, 1);
+  bg   = mallocz(window_width*window_height, 1);
+  fg   = mallocz(window_width*window_height, 1);
+
+  if (fg == nil || bg == nil || sbuf == nil)
+    sysfatal("malloc");
 }
 
 static void
@@ -142,7 +143,7 @@ center_window(void)
   int y1 = cy - window_height/2;
   fprint(wctl_fd, "resize -r %d %d %d %d\n", x1, y1, x1+window_width, y1+window_height);
 
-  update_window_size();
+  //update_window_size();
 }
 
 static u16int
@@ -170,7 +171,7 @@ screen_set_x(u8int getp, u16int x)
 {
   if (getp)
     return current_x;
-  current_x = x;
+  current_x = MIN(window_width, x);
   return x;
 }
 
@@ -179,7 +180,7 @@ screen_set_y(u8int getp, u16int y)
 {
   if (getp)
     return current_y;
-  current_y = y;
+  current_y = MIN(window_height, y);
   return y;
 }
 
@@ -287,7 +288,7 @@ init_screen_device(Uxn *uxn)
   if (initdraw(nil, nil, argv0) < 0)
     sysfatal("initdraw: %r");
 
-  update_window_size();
+  set_new_window_size();
 
   if ((mouse = initmouse(nil, screen)) == nil) sysfatal("initmouse: %r");
   if ((keyboard = initkeyboard(nil)) == nil) sysfatal("initkeyboard: %r");
@@ -325,7 +326,9 @@ screen_main_loop(Uxn *uxn)
   u16int run = 0x00ff;
   current_uxn = uxn;
 
+  print("BEFORE CENTER\n");
   center_window();
+  print("OK CENTER\n");
 
   Cursor *c = mallocz(sizeof(Cursor), 1);
   setcursor(mouse, c);
