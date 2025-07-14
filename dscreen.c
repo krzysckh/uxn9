@@ -328,6 +328,7 @@ screen_main_loop(Uxn *uxn)
 
   print("BEFORE CENTER\n");
   center_window();
+  update_window_size();
   print("OK CENTER\n");
 
   Cursor *c = mallocz(sizeof(Cursor), 1);
@@ -348,6 +349,7 @@ screen_main_loop(Uxn *uxn)
     };
     switch (alt(a)) {
     case CMOUSE:
+      //print("CMOUSE\n");
       update_mouse_state(mouse->buttons);
       if (mouse_vector) {
         uxn->pc = mouse_vector;
@@ -355,11 +357,13 @@ screen_main_loop(Uxn *uxn)
       }
       break;
     case CREDRAW:
+      //print("CREDRAW\n");
       uxn->pc = screen_vector;
       vm(uxn);
       redraw();
       break;
     case CRESIZ:
+      //print("CRESIZ\n");
       update_window_size();
       break;
     }
