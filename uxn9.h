@@ -40,4 +40,7 @@ void init_file_device(Uxn *);
 void init_mouse_device(Uxn *);
 void update_mouse_state(int);
 
+/* datetime */
+void init_datetime_device(Uxn *);
+
 #endif /* __UXN9_H */

@@ -36,6 +36,7 @@
 #define OPCn(n, op, uxn, code)                  \
   { STACKS(op, uxn, ST, SP);                    \
     u16int RES = 0;                             \
+    USED(RES);                                  \
     code;                                       \
     UN(op, SP, n);                              \
     if (_2)                                     \
@@ -206,6 +207,7 @@ threadmain(int argc, char **argv)
   init_console_device(uxn);
   init_screen_device(uxn);
   init_mouse_device(uxn);
+  init_datetime_device(uxn);
 
   uxn->mem = mem;
   uxn->pc = 0x100;
