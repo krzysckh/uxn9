@@ -4,9 +4,10 @@
 #define RETP(x)   (1<<6&x)
 #define SHORTP(x) ((1<<5&x)?1:0)
 
-#define IT(n, s, sp)  (s[(*sp)-((n)+1)])
-#define IT2(n, s, sp) ((s[(*sp)-(((n)*2)+2)]<<8)|s[(*sp)-((n*2)+1)])
-#define IT2_(n, s, sp) ((s[(*sp)-(((n)*2)+3)]<<8)|s[(*sp)-((n*2)+2)])
+#define WRAP(x) (((u8int)x)&0xff)
+#define IT(n, s, sp)  (s[WRAP((*sp)-((n)+1))])
+#define IT2(n, s, sp) ((s[WRAP((*sp)-(((n)*2)+2))]<<8)|s[WRAP((*sp)-((n*2)+1))])
+#define IT2_(n, s, sp) ((s[WRAP((*sp)-(((n)*2)+3))]<<8)|s[WRAP((*sp)-((n*2)+2))])
 
 #define PUSH(x, s, sp)   (s[(*sp)++] = x)
 #define PUSH2(x, s, sp)  { PUSH((x)>>8, s, sp); PUSH((x), s, sp); }
@@ -21,7 +22,8 @@
 
 #define STACKS(op, uxn, ST, SP) u8int *ST = S, *SP = Q;
 
-#define LIT(op, uxn)                            \
+#define MEM(at) (uxn->mem[(at)&0xffff])
+#define LIT()                                   \
   { STACKS(op, uxn, ST, SP);                    \
     if (_2) {                                   \
       PUSH(MEM(uxn->pc+1), ST, SP);             \
@@ -57,7 +59,6 @@
 #define BINOP(B, op, uxn) { OPCn(2+(2*_2), op, uxn, { RES = PEEKb() B PEEK(); }); NEXT(1) };
 
 #define OP8(B, op, uxn) {u16int a = PEEK(), b = PEEKb(); UN(op, Q, 2+(2*_2)); PUSH(a B b, S, Q); NEXT(1);}
-#define MEM(at) (uxn->mem[(at)&0xffff])
 
 static void
 usage(void)
@@ -99,7 +100,7 @@ loop:
   /* LIT handled later */
   }
   switch (op&0x1f) {
-  case 0x00: if (K) LIT(op, uxn) else return;
+  case 0x00: if (K) LIT() else return;
   case 0x01: OPCn(1+_2, op, uxn, { RES = PEEK() + 1; }); NEXT(1);
   case 0x02: if (K) { /* NOOP */ NEXT(1); } else { UN(op, Q, 1+_2); NEXT(1); }
     /* TODO: collapse 03 and 04 into one */
@@ -154,7 +155,6 @@ loop:
       NEXT(1);}
   case 0x17: {u16int dev = IT(0, S, Q), val = _2 ? IT2_(0, S, Q) : IT(1, S, Q);
       UN(op, Q, 2+_2);
-      // print("DEO %02x\n", dev);
       if (uxn->devices[dev]) uxn->devices[dev](0, val);
 #ifdef UXN9_FATAL_NODEVICE
       else sysfatal("unknown device %02x", dev);
