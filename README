@@ -1,1 +1,4 @@
 wip native uxn emulator for plan9front
+
+did you know that to have raw access to the keyboard you have to rebuild your
+application to be multithreaded?
