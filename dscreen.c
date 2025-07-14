@@ -14,12 +14,13 @@
 #define INITIAL_WINDOW_HEIGHT (40*8)
 
 #define MIN(a,b) ((a)<(b)?(a):(b))
+#define MAX(a,b) ((a)>(b)?(a):(b))
 
-blending[4][16] = {
- {0, 0, 0, 0, 1, 0, 1, 1, 2, 2, 0, 2, 3, 3, 3, 0},
- {0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3},
- {1, 2, 3, 1, 1, 2, 3, 1, 1, 2, 3, 1, 1, 2, 3, 1},
- {2, 3, 1, 2, 2, 3, 1, 2, 2, 3, 1, 2, 2, 3, 1, 2}};
+int blending[4][16] = {
+  {0, 0, 0, 0, 1, 0, 1, 1, 2, 2, 0, 2, 3, 3, 3, 0},
+  {0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3},
+  {1, 2, 3, 1, 1, 2, 3, 1, 1, 2, 3, 1, 1, 2, 3, 1},
+  {2, 3, 1, 2, 2, 3, 1, 2, 2, 3, 1, 2, 2, 3, 1, 2}};
 
 #define BLEND(color, c) blending[color][c]
 
@@ -208,7 +209,7 @@ screen_set_addr(u8int getp, u16int addr)
 static u16int
 screen_sprite(u8int getp, u16int dat)
 {
-  uint i, j, A, drawN = autoN+1;
+  s32int i, j, A, tx, ty, x = current_x, y = current_y;
   u8int _2bpp = 0b10000000&dat,
         layer = 0b1000000&dat,
         flipyp = 0b100000&dat,
@@ -216,8 +217,6 @@ screen_sprite(u8int getp, u16int dat)
         color = 0b1111&dat,
         *target = layer ? fg : bg,
         cur;
-
-  s32int x = current_x, y = current_y;
 
   /*
   if (autoX && autoY)
@@ -227,20 +226,20 @@ screen_sprite(u8int getp, u16int dat)
   if (getp)
     return 0xff;
 
-  for (A = 0; A < drawN; ++A) {
+  for (A = 0; A < autoN + 1; ++A) {
     /* draw sprite */
     for (i = 0; i < 8; ++i) {
-      if (y + i >= window_height) break;
       for (j = 0; j < 8; ++j) {
-        if (x + j >= window_width) break;
         if (_2bpp) {
           cur = (((current_uxn->mem[screen_addr + i]>>(flipxp?j:7-j))&1))|(((current_uxn->mem[screen_addr + i + 8]>>(flipxp?j:7-j))&1)<<1);
           if (cur > 3)
             sysfatal("bad cur");
         } else
           cur = ((current_uxn->mem[screen_addr + i])>>(flipxp?j:7-j))&0b1;
-        if (cur || color % 5) /* why */
-          target[((y+(flipyp?7-i:i))*window_width)+x+j] = BLEND(cur, color);
+        tx = x+j, ty = (y+(flipyp?7-i:i));
+        if (ty < window_height && ty >= 0 && tx < window_width && ty >= 0)
+          if (cur || color % 5) /* why */
+            target[ty*window_width + tx] = BLEND(cur, color);
       }
     }
     /* end draw sprite */
