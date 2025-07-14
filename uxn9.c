@@ -186,8 +186,8 @@ extern char **console_argv;
 void
 threadmain(int argc, char **argv)
 {
-  Uxn *uxn = malloc(sizeof(Uxn));
-  u8int *mem = malloc(1<<16);
+  Uxn *uxn = mallocz(sizeof(Uxn), 1);
+  u8int *mem = mallocz(1<<16, 1);
   int fd;
 
   ARGBEGIN {
@@ -208,12 +208,14 @@ threadmain(int argc, char **argv)
   init_screen_device(uxn);
   init_mouse_device(uxn);
   init_datetime_device(uxn);
+  init_controller_device(uxn);
 
   uxn->mem = mem;
   uxn->pc = 0x100;
 
   vm(uxn);
-  screen_main_loop(uxn);
+  proccreate(screen_main_loop, uxn, mainstacksize);
+  //screen_main_loop(uxn);
 
-  threadexitsall(nil);
+  //threadexitsall(nil);
 }

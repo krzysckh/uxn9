@@ -16,6 +16,7 @@ typedef u16int (*Dev)(u8int, u16int);
 
 typedef struct Uxn
 {
+  Lock l;
   u16int pc;
   u8int *mem, rst[0x100], wst[0x100], rstp, wstp;
   Dev devices[0x100];
@@ -31,7 +32,7 @@ void init_console_device(Uxn *);
 
 /* screen */
 void init_screen_device(Uxn *);
-void screen_main_loop(Uxn *);
+void screen_main_loop(void *);
 
 /* file */
 void init_file_device(Uxn *);
@@ -42,5 +43,8 @@ void update_mouse_state(int);
 
 /* datetime */
 void init_datetime_device(Uxn *);
+
+/* controller */
+void init_controller_device(Uxn *);
 
 #endif /* __UXN9_H */

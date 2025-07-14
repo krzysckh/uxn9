@@ -28,10 +28,14 @@ static Uxn *current_uxn = nil;
 
 static u16int screen_vector = 0;
 extern u16int mouse_vector;
+extern u16int controller_vector;
+extern u8int current_button;
 
 static u8int autoN = 0, autoX = 0, autoY = 0, autoA = 0;
 static u16int screen_addr = 0;
-static Rune current_rune = 0;
+
+extern Rune current_rune;
+//extern u8int current_button;
 
 static u16int window_width = INITIAL_WINDOW_WIDTH;
 static u16int window_height = INITIAL_WINDOW_HEIGHT;
@@ -47,8 +51,8 @@ static Image *img = nil;
 
 static int resizeskip = 0;
 
+static Keyboardctl *keyboard = nil;
 Mousectl *mouse = nil;
-Keyboardctl *keyboard = nil;
 
 u8int colors[] = {
   /*B   G     R */
@@ -311,7 +315,7 @@ init_screen_device(Uxn *uxn)
   set_new_window_size();
 
   if ((mouse = initmouse(nil, screen)) == nil) sysfatal("initmouse: %r");
-  if ((keyboard = initkeyboard(nil)) == nil) sysfatal("initkeyboard: %r");
+  // if ((keyboard = initkeyboard(nil)) == nil) sysfatal("initkeyboard: %r");
 
   uxn->devices[SCREEN_VECTOR] = screen_set_vec;
   uxn->devices[SCREEN_WIDTH ] = screen_set_width;
@@ -324,7 +328,7 @@ init_screen_device(Uxn *uxn)
   uxn->devices[SCREEN_SPRITE] = screen_sprite;
 }
 
-void
+static void
 frame_thread(void *arg)
 {
   Channel *c = (Channel*)arg;
@@ -339,9 +343,73 @@ frame_thread(void *arg)
   }
 }
 
-void
-screen_main_loop(Uxn *uxn)
+static void
+btn_thread(void *arg)
 {
+  Uxn *uxn = arg;
+  Rune r;
+  int fd = open("/dev/kbd", OREAD);
+  s8int b[256] = {0}, *bv;
+  int nread;
+  if (fd < 0)
+    sysfatal("devkbd");
+
+  for (;;) {
+    if ((nread = read(fd, b, sizeof(b)-1))) {
+      bv = b;
+      lock(&uxn->l);
+      current_button = 0;
+      b[nread] = 0;
+      b[nread+1] = 0;
+loop: while (*bv) {
+        switch (*bv) {
+        case 'c':
+          if (utfrune(bv, Kdel)) sysfatal("delete");
+          break;
+        // case 'K':
+        case 'k':
+          bv++;
+          while (*bv) {
+            bv += chartorune(&r, bv);
+            switch (r) {
+            case Kctl:   current_button |= 1;    break;
+            case Kalt:   current_button |= 1<<1; break;
+            case Kshift: current_button |= 1<<2; break;
+            case Khome:  current_button |= 1<<3; break;
+            case Kup:    current_button |= 1<<4; break;
+            case Kdown:  current_button |= 1<<5; break;
+            case Kleft:  current_button |= 1<<6; break;
+            case Kright: current_button |= 1<<7; break;
+            default:
+              if (r < 128) {
+                current_rune = r&0xff;
+                uxn->pc = controller_vector;
+                vm(uxn);
+                break;
+              }
+            }
+          }
+          if (current_button) {
+            uxn->pc = controller_vector;
+            vm(uxn);
+          }
+          goto loop;
+        default:
+          ;
+          // fprint(1, "unknown: %s\n", bv);
+        }
+        while (*bv++)
+          ;
+      }
+      unlock(&uxn->l);
+    }
+  }
+}
+
+void
+screen_main_loop(void *arg)
+{
+  Uxn *uxn = arg;
   int resiz[2];
   u16int run = 0x00ff;
   current_uxn = uxn;
@@ -352,36 +420,37 @@ screen_main_loop(Uxn *uxn)
   Cursor *c = mallocz(sizeof(Cursor), 1);
   setcursor(mouse, c);
 
-  Channel *ch = chancreate(1, 1);
+  Channel *drawch = chancreate(1, 1);
   u8int _;
-  threadcreate(frame_thread, ch, 1024);
+  threadcreate(frame_thread, drawch, 1024);
+  proccreate(btn_thread, uxn, 1024);
 
-  enum { CMOUSE, CKBD, CRESIZ, CREDRAW };
+  enum { CMOUSE, CRESIZ, CREDRAW };
   while (run /*--*/) {
     Alt a[] = {
-      { mouse->c,       &mouse->Mouse, CHANRCV },
-      { keyboard->c,    &current_rune, CHANRCV },
-      { mouse->resizec, &resiz,        CHANRCV },
-      { ch,             &_,            CHANRCV }, /* draw interrupt channel */
-      { nil,            nil,           CHANEND }
+      { mouse->c,       &mouse->Mouse,   CHANRCV },
+      { mouse->resizec, &resiz,          CHANRCV },
+      { drawch,         &_,              CHANRCV }, /* draw interrupt channel */
+      { nil,            nil,             CHANEND }
     };
     switch (alt(a)) {
     case CMOUSE:
-      //print("CMOUSE\n");
       update_mouse_state(mouse->buttons);
       if (mouse_vector) {
+        lock(&uxn->l);
         uxn->pc = mouse_vector;
         vm(uxn);
+        unlock(&uxn->l);
       }
       break;
     case CREDRAW:
-      //print("CREDRAW\n");
+      lock(&uxn->l);
       uxn->pc = screen_vector;
       vm(uxn);
+      unlock(&uxn->l);
       redraw();
       break;
     case CRESIZ:
-      //print("CRESIZ\n");
       update_window_size();
       break;
     }

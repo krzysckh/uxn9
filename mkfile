@@ -12,6 +12,7 @@ OFILES=\
   dmouse.$O \
   dfile.$O \
   dconsole.$O \
+  dcontroller.$O \
   dscreen.$O \
 
 </sys/src/cmd/mkone
