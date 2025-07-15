@@ -32,7 +32,7 @@ void init_console_device(Uxn *);
 
 /* screen */
 void init_screen_device(Uxn *);
-void screen_main_loop(void *);
+void screen_main_loop(Uxn *);
 
 /* file */
 void init_file_device(Uxn *);
@@ -46,5 +46,6 @@ void init_datetime_device(Uxn *);
 
 /* controller */
 void init_controller_device(Uxn *);
+void btn_thread(void *);
 
 #endif /* __UXN9_H */

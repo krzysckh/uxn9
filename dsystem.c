@@ -32,11 +32,13 @@ system_set_color(u8int off, u16int dat)
   colors[off+9] = c4;
 }
 
+// FIXME: getp color
+
 u16int
 system_red(u8int getp, u16int dat)
 {
   if (getp)
-    sysfatal("getp color");
+    return 0;
   system_set_color(2, dat);
   return 0;
 }
@@ -45,7 +47,7 @@ u16int
 system_green(u8int getp, u16int dat)
 {
   if (getp)
-    sysfatal("getp color");
+    return 0;
   system_set_color(1, dat);
   return 0;
 }
@@ -54,7 +56,7 @@ u16int
 system_blue(u8int getp, u16int dat)
 {
   if (getp)
-    sysfatal("getp color");
+    return 0;
   system_set_color(0, dat);
   return 0;
 }

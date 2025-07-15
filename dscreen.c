@@ -35,7 +35,6 @@ static u8int autoN = 0, autoX = 0, autoY = 0, autoA = 0;
 static u16int screen_addr = 0;
 
 extern Rune current_rune;
-//extern u8int current_button;
 
 static u16int window_width = INITIAL_WINDOW_WIDTH;
 static u16int window_height = INITIAL_WINDOW_HEIGHT;
@@ -234,11 +233,9 @@ screen_sprite(u8int getp, u16int dat)
     /* draw sprite */
     for (i = 0; i < 8; ++i) {
       for (j = 0; j < 8; ++j) {
-        if (_2bpp) {
+        if (_2bpp)
           cur = (((current_uxn->mem[screen_addr + i]>>(flipxp?j:7-j))&1))|(((current_uxn->mem[screen_addr + i + 8]>>(flipxp?j:7-j))&1)<<1);
-          if (cur > 3)
-            sysfatal("bad cur");
-        } else
+        else
           cur = ((current_uxn->mem[screen_addr + i])>>(flipxp?j:7-j))&0b1;
         tx = x+j, ty = (y+(flipyp?7-i:i));
         if (ty < window_height && ty >= 0 && tx < window_width && ty >= 0)
@@ -343,73 +340,9 @@ frame_thread(void *arg)
   }
 }
 
-static void
-btn_thread(void *arg)
-{
-  Uxn *uxn = arg;
-  Rune r;
-  int fd = open("/dev/kbd", OREAD);
-  s8int b[256] = {0}, *bv;
-  int nread;
-  if (fd < 0)
-    sysfatal("devkbd");
-
-  for (;;) {
-    if ((nread = read(fd, b, sizeof(b)-1))) {
-      bv = b;
-      lock(&uxn->l);
-      current_button = 0;
-      b[nread] = 0;
-      b[nread+1] = 0;
-loop: while (*bv) {
-        switch (*bv) {
-        case 'c':
-          if (utfrune(bv, Kdel)) sysfatal("delete");
-          break;
-        // case 'K':
-        case 'k':
-          bv++;
-          while (*bv) {
-            bv += chartorune(&r, bv);
-            switch (r) {
-            case Kctl:   current_button |= 1;    break;
-            case Kalt:   current_button |= 1<<1; break;
-            case Kshift: current_button |= 1<<2; break;
-            case Khome:  current_button |= 1<<3; break;
-            case Kup:    current_button |= 1<<4; break;
-            case Kdown:  current_button |= 1<<5; break;
-            case Kleft:  current_button |= 1<<6; break;
-            case Kright: current_button |= 1<<7; break;
-            default:
-              if (r < 128) {
-                current_rune = r&0xff;
-                uxn->pc = controller_vector;
-                vm(uxn);
-                break;
-              }
-            }
-          }
-          if (current_button) {
-            uxn->pc = controller_vector;
-            vm(uxn);
-          }
-          goto loop;
-        default:
-          ;
-          // fprint(1, "unknown: %s\n", bv);
-        }
-        while (*bv++)
-          ;
-      }
-      unlock(&uxn->l);
-    }
-  }
-}
-
 void
-screen_main_loop(void *arg)
+screen_main_loop(Uxn *uxn)
 {
-  Uxn *uxn = arg;
   int resiz[2];
   u16int run = 0x00ff;
   current_uxn = uxn;

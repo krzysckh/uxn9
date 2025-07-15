@@ -214,8 +214,8 @@ threadmain(int argc, char **argv)
   uxn->pc = 0x100;
 
   vm(uxn);
-  proccreate(screen_main_loop, uxn, mainstacksize);
-  //screen_main_loop(uxn);
+  //proccreate(screen_main_loop, uxn, mainstacksize);
+  screen_main_loop(uxn);
 
   //threadexitsall(nil);
 }
