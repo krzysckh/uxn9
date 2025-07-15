@@ -2,7 +2,6 @@
 #define __UXN9_H
 
 // #define UXN9_FATAL_NODEVICE /* sorry */
-#define TARGET_FPS 60
 
 #include <u.h>
 #include <libc.h>
@@ -33,6 +32,7 @@ void init_console_device(Uxn *);
 /* screen */
 void init_screen_device(Uxn *);
 void screen_main_loop(Uxn *);
+extern uint TARGET_FPS;
 
 /* file */
 void init_file_device(Uxn *);

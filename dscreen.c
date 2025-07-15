@@ -25,6 +25,7 @@ int blending[4][16] = {
 #define BLEND(color, c) blending[color][c]
 
 static Uxn *current_uxn = nil;
+uint TARGET_FPS = 60;
 
 static u16int screen_vector = 0;
 extern u16int mouse_vector;
