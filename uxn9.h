@@ -1,7 +1,7 @@
 #ifndef __UXN9_H
 #define __UXN9_H
 
-#define UXN9_FATAL_NODEVICE /* sorry */
+// #define UXN9_FATAL_NODEVICE /* sorry */
 
 #include <u.h>
 #include <libc.h>
@@ -19,6 +19,7 @@ typedef struct Uxn
   u16int pc;
   u8int *mem, rst[0x100], wst[0x100], rstp, wstp;
   Dev devices[0x100];
+  // TODO: mark which devices are shorts, so DEO reads of the 2nd byte can return valid values
 } Uxn;
 
 void vm(Uxn *);

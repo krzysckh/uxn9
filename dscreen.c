@@ -280,7 +280,7 @@ static u16int
 screen_auto(u8int getp, u16int dat)
 {
   if (getp)
-    sysfatal("get auto");
+    return (autoN<<4)|autoX|autoY|autoA;
   autoN = (dat&0xf0)>>4;
   autoX = dat&1;
   autoY = dat&(1<<1);
