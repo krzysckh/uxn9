@@ -31,6 +31,7 @@ static u16int screen_vector = 0;
 extern u16int mouse_vector;
 extern u16int controller_vector;
 extern u8int current_button;
+extern u8int mouse_state;
 
 static u8int autoN = 0, autoX = 0, autoY = 0, autoA = 0;
 static u16int screen_addr = 0;
@@ -369,7 +370,7 @@ screen_main_loop(Uxn *uxn)
     };
     switch (alt(a)) {
     case CMOUSE:
-      update_mouse_state(mouse->buttons);
+      mouse_state = mouse->buttons;
       if (mouse_vector) {
         lock(&uxn->l);
         uxn->pc = mouse_vector;

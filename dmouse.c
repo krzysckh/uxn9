@@ -6,7 +6,7 @@
 #define MOUSE_STATE 0x96
 
 u16int mouse_vector = 0;
-static u8int mouse_state = 0;
+u8int mouse_state = 0;
 
 extern Mousectl *mouse;
 
@@ -40,16 +40,6 @@ get_mouse_state(u8int getp, u16int dat)
 {
   USED(getp, dat);
   return mouse_state;
-}
-
-/* internal data -> uxn data */
-void
-update_mouse_state(int buttons)
-{
-  mouse_state = 0;
-  if (buttons&1) mouse_state |= 1;
-  if (buttons&1<<1) mouse_state |= 1<<2;
-  if (buttons&1<<2) mouse_state |= 1<<1;
 }
 
 void
