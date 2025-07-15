@@ -215,6 +215,7 @@ threadmain(int argc, char **argv)
   init_mouse_device(uxn);
   init_datetime_device(uxn);
   init_controller_device(uxn);
+  init_file_device(uxn);
 
   vm(uxn);
   //proccreate(screen_main_loop, uxn, mainstacksize);

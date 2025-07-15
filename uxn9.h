@@ -1,7 +1,7 @@
 #ifndef __UXN9_H
 #define __UXN9_H
 
-// #define UXN9_FATAL_NODEVICE /* sorry */
+#define UXN9_FATAL_NODEVICE /* sorry */
 
 #include <u.h>
 #include <libc.h>
@@ -48,8 +48,10 @@ void init_datetime_device(Uxn *);
 void init_controller_device(Uxn *);
 void btn_thread(void *);
 
-#define DEFGETSET(name, ob) \
+#define DEFGETSET_(name, ob, before) \
   static u16int \
   name (u8int getp, u16int dat) { if (getp) return ob; ob = dat; return ob; }
+
+#define DEFGETSET(name, ob) DEFGETSET_(name, ob, {})
 
 #endif /* __UXN9_H */

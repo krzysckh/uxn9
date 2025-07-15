@@ -10,6 +10,6 @@ state:
     - console device
     - controller device
     - mouse device
+    - file device
   * not implemented
     - audio device
-    - file device
