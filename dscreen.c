@@ -283,6 +283,9 @@ screen_pixel(u8int getp, u16int dat)
   } else
     target[(current_y*window_width)+current_x] = color;
 
+  if (autoX) current_x++;
+  if (autoY) current_y++;
+
   return dat;
 }
 

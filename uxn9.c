@@ -206,15 +206,15 @@ threadmain(int argc, char **argv)
   int rd = read(fd, mem+0x100, (1<<16)-0x100);
   close(fd);
 
+  uxn->mem = mem;
+  uxn->pc = 0x100;
+
   init_system_device(uxn);
   init_console_device(uxn);
   init_screen_device(uxn);
   init_mouse_device(uxn);
   init_datetime_device(uxn);
   init_controller_device(uxn);
-
-  uxn->mem = mem;
-  uxn->pc = 0x100;
 
   vm(uxn);
   //proccreate(screen_main_loop, uxn, mainstacksize);
