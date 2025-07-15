@@ -190,23 +190,8 @@ screen_set_y(u8int getp, u16int y)
   return y;
 }
 
-static u16int
-screen_set_vec(u8int getp, u16int vec)
-{
-  if (getp)
-    return screen_vector;
-  screen_vector = vec;
-  return vec;
-}
-
-static u16int
-screen_set_addr(u8int getp, u16int addr)
-{
-  if (getp)
-    return screen_addr;
-  screen_addr = addr;
-  return addr;
-}
+DEFGETSET(screen_set_vec, screen_vector);
+DEFGETSET(screen_set_addr, screen_addr);
 
 // 2bpp layer flipy flipx 3 2 1 0
 //                        \_____/- color

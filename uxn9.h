@@ -48,4 +48,8 @@ void init_datetime_device(Uxn *);
 void init_controller_device(Uxn *);
 void btn_thread(void *);
 
+#define DEFGETSET(name, ob) \
+  static u16int \
+  name (u8int getp, u16int dat) { if (getp) return ob; ob = dat; return ob; }
+
 #endif /* __UXN9_H */
