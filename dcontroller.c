@@ -33,7 +33,7 @@ loop: while (*bv) {
         case 'c':
           if (utfrune(bv, Kdel)) sysfatal("delete");
           break;
-        case 'k':
+        case 'k': /* keydown */
           bev = 1;
           bv++;
           while (*bv) {
@@ -48,17 +48,14 @@ loop: while (*bv) {
             case Kleft:  bev = 1, button |= (1<<6); break;
             case Kright: bev = 1, button |= (1<<7); break;
             default:
-              ;
-                         /*
-              if (runelen(r) == 1 && r > 32 && r < 127) {
-                current_rune = r&0xff;
-                print("RUNE! %02x\n", current_rune);
-                uxn->pc = controller_vector;
+              if (r < 0x80) {
+                // print("char: %c (%d)\n", r&0xff, r&0xff);
+                SDEV(CONTROLLER_KEY, r&0xff);
+                uxn->pc = DEV2(CONTROLLER_VECTOR);
                 vm(uxn);
-                current_rune = 0;
+                SDEV(CONTROLLER_KEY, 0);
                 break;
               }
-              */
             }
           }
           if (bev) {
@@ -67,12 +64,8 @@ loop: while (*bv) {
             vm(uxn);
           }
           goto loop;
-        case 'K':
-          bv++;
-          while (*bv) {
-            bv += chartorune(&r, bv);
-          }
-          /*
+        case 'K': /* keyup */
+          button = DEV(CONTROLLER_KEY);
           bev = 1;
           bv++;
           while (*bv) {
@@ -90,10 +83,7 @@ loop: while (*bv) {
               ;
             }
           }
-          */
-          button = 0;
           SDEV(CONTROLLER_BUTTON, button);
-            //print("KEYUP %02x!", current_button);
           uxn->pc = DEV2(CONTROLLER_VECTOR);
           vm(uxn);
           goto loop;
@@ -109,6 +99,7 @@ loop: while (*bv) {
   }
 }
 
+// TODO: maybe move the start of btn_thread here
 void
 init_controller_device(Uxn *uxn)
 {

@@ -6,9 +6,9 @@ state:
     - system device
     - screen device
     - datetime device
+    - controller device
   * implemented partially:
     - console device
-    - controller device
     - mouse device
     - file device
   * not implemented
