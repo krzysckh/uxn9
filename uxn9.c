@@ -63,7 +63,7 @@
 static void
 usage(void)
 {
-  fprint(2, "usage: %s [-f targetfps] file.rom\n", argv0);
+  fprint(2, "usage: %s [-S] [-f targetfps] file.rom\n", argv0);
   threadexitsall("usage");
 }
 
@@ -192,6 +192,9 @@ threadmain(int argc, char **argv)
   ARGBEGIN {
     case 'f':
       TARGET_FPS = atoi(EARGF(usage()));
+      break;
+    case 'S':
+      DEBUG_SMART_DRAWING = 1;
       break;
     default: usage();
   } ARGEND;

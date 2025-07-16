@@ -13,3 +13,16 @@ state:
     - file device
   * not implemented
     - audio device
+
+INSTALLATION
+
+  ; mk
+  ; mk install
+
+USAGE
+
+  uxn9 [-S] [-f targetfps] file.rom
+
+  -f number  changes the target fps
+  -S         turns on smart drawing debug mode on
+

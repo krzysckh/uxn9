@@ -1,7 +1,7 @@
 #ifndef __UXN9_H
 #define __UXN9_H
 
-// #define USE_SMART_DRAWING
+#define USE_SMART_DRAWING
 
 #include <u.h>
 #include <libc.h>
@@ -64,6 +64,7 @@ void init_console_device(Uxn *);
 void init_screen_device(Uxn *);
 void screen_main_loop(Uxn *);
 extern uint TARGET_FPS;
+extern uint DEBUG_SMART_DRAWING;
 
 /* file */
 

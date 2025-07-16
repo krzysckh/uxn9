@@ -24,6 +24,7 @@ int blending[4][16] = {
   {2, 3, 1, 2, 2, 3, 1, 2, 2, 3, 1, 2, 2, 3, 1, 2}};
 
 uint TARGET_FPS = 60;
+uint DEBUG_SMART_DRAWING = 0;
 
 static int wctl_fd = 0;
 
@@ -57,9 +58,8 @@ update_screen_buffer(Uxn *uxn)
   u8int sel;
   WINSIZES;
 
-#ifdef DEBUG_SMART_DRAWING
-  memset(sbuf, 0, window_width*window_height*3);
-#endif // DEBUG_SMART_DRAWING
+  if (DEBUG_SMART_DRAWING)
+    memset(sbuf, 0, window_width*window_height*3);
 
 #ifdef USE_SMART_DRAWING
   for (i = MAX(0, miny); i < MIN(window_height, maxy+1); ++i) {
@@ -71,9 +71,9 @@ update_screen_buffer(Uxn *uxn)
       pt = (i*window_width)+j;
       if (fg[pt]) sel = fg[pt]; else sel = bg[pt];
 
-#ifdef DEBUG_SMART_DRAWING
-      sel = 2;
-#endif // DEBUG_SMART_DRAWING
+      if (DEBUG_SMART_DRAWING)
+        sel = 2;
+
       sbuf[pt*3]     = colors[sel*3];
       sbuf[pt*3 + 1] = colors[sel*3 + 1];
       sbuf[pt*3 + 2] = colors[sel*3 + 2];
@@ -175,7 +175,7 @@ static void
 screen_sprite(Uxn *uxn)
 {
   s32int i, j, A;
-  u16int tx, ty, x = DEV2(SCREEN_X), y = DEV2(SCREEN_Y);
+  u16int tx, ty, x = DEV2(SCREEN_X), y = DEV2(SCREEN_Y), xwas = x, ywas = y;
   u16int addr = DEV2(SCREEN_ADDR);
   u8int dat     = DEV(SCREEN_SPRITE),
         _2bpp   = 0b10000000&dat,
@@ -208,15 +208,16 @@ screen_sprite(Uxn *uxn)
     }
     /* end draw sprite */
 
-#ifdef USE_SMART_DRAWING
-    minx = MIN(x, MIN(minx, tx)), maxx = MAX(x, MAX(maxx, tx));
-    miny = MIN(y, MIN(miny, ty)), maxy = MAX(y, MAX(maxy, ty));
-#endif
-
     if (autoX) y = flipyp? y-8 : y+8;
     if (autoY) x = flipxp? x-8 : x+8;
     if (autoA) addr += _2bpp ? 16 : 8;
   }
+
+#ifdef USE_SMART_DRAWING
+    minx = MIN(xwas, MIN(minx, tx)), maxx = MAX(xwas, MAX(maxx, tx));
+    miny = MIN(ywas, MIN(miny, ty)), maxy = MAX(ywas, MAX(maxy, ty));
+#endif
+
 
   if (autoX) SDEV2(SCREEN_X, flipxp ? x-8 : x+8);
   if (autoY) SDEV2(SCREEN_Y, flipyp ? y-8 : y+8);
@@ -247,13 +248,12 @@ screen_pixel(Uxn *uxn)
   } else
     target[(y*window_width)+x] = color;
 
-#ifdef USE_SMART_DRAWING
-  minx = MIN(x, MIN(minx, x+j)), maxx = MAX(x, MAX(maxx, x+j));
-  miny = MIN(y, MIN(miny, y+i)), maxy = MAX(y, MAX(maxy, y+i));
-#endif
-
   if (autoX) SDEV2(SCREEN_X, x+1);
   if (autoY) SDEV2(SCREEN_Y, y+1);
+
+#ifdef USE_SMART_DRAWING
+  minx = 0, miny = 0, maxx = 0xffff, maxy = 0xffff;
+#endif
 }
 
 static void
