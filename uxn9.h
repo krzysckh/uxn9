@@ -1,6 +1,8 @@
 #ifndef __UXN9_H
 #define __UXN9_H
 
+// #define USE_SMART_DRAWING
+
 #include <u.h>
 #include <libc.h>
 #include <draw.h>

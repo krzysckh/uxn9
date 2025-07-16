@@ -27,6 +27,10 @@ uint TARGET_FPS = 60;
 
 static int wctl_fd = 0;
 
+#ifdef USE_SMART_DRAWING
+static u16int miny = 0xffff, minx = 0xffff, maxx = 0, maxy = 0;
+#endif // USE_SMART_DRAWING
+
 static u8int *fg = nil;
 static u8int *bg = nil;
 static u8int *sbuf = nil; /* data buffer */
@@ -53,16 +57,32 @@ update_screen_buffer(Uxn *uxn)
   u8int sel;
   WINSIZES;
 
+#ifdef DEBUG_SMART_DRAWING
+  memset(sbuf, 0, window_width*window_height*3);
+#endif // DEBUG_SMART_DRAWING
+
+#ifdef USE_SMART_DRAWING
+  for (i = MAX(0, miny); i < MIN(window_height, maxy+1); ++i) {
+    for (j = MAX(0, minx); j < MIN(window_width, maxx+1); ++j) {
+#else
   for (i = 0; i < window_height; ++i) {
     for (j = 0; j < window_width; ++j) {
+#endif // USE_SMART_DRAWING
       pt = (i*window_width)+j;
       if (fg[pt]) sel = fg[pt]; else sel = bg[pt];
 
-      sbuf[pt*3] = colors[sel*3];
+#ifdef DEBUG_SMART_DRAWING
+      sel = 2;
+#endif // DEBUG_SMART_DRAWING
+      sbuf[pt*3]     = colors[sel*3];
       sbuf[pt*3 + 1] = colors[sel*3 + 1];
       sbuf[pt*3 + 2] = colors[sel*3 + 2];
     }
   }
+
+#ifdef USE_SMART_DRAWING
+  miny = minx = 0xffff, maxx = maxy = 0;
+#endif
 }
 
 static void
@@ -143,6 +163,9 @@ static void
 screen_update_size(Uxn *uxn)
 {
   set_new_window_size(uxn);
+#ifdef USE_SMART_DRAWING
+  minx = miny = 0, maxx = maxy = 0xffff;
+#endif
 }
 
 // 2bpp layer flipy flipx 3 2 1 0
@@ -185,6 +208,11 @@ screen_sprite(Uxn *uxn)
     }
     /* end draw sprite */
 
+#ifdef USE_SMART_DRAWING
+    minx = MIN(x, MIN(minx, tx)), maxx = MAX(x, MAX(maxx, tx));
+    miny = MIN(y, MIN(miny, ty)), maxy = MAX(y, MAX(maxy, ty));
+#endif
+
     if (autoX) y = flipyp? y-8 : y+8;
     if (autoY) x = flipxp? x-8 : x+8;
     if (autoA) addr += _2bpp ? 16 : 8;
@@ -201,25 +229,31 @@ screen_sprite(Uxn *uxn)
 static void
 screen_pixel(Uxn *uxn)
 {
-  int i, j;
   u8int dat     = DEV(SCREEN_PIXEL),
         color   = 0b11&dat,
         fillp   = 0b10000000&dat,
         layer   = 0b1000000&dat,
         flipxp  = 0b100000&dat,
         flipyp  = 0b10000&dat,
-        *target = layer ? fg : bg;
+        *target = layer ? fg : bg ;
   WINSIZES;
+  u16int x = DEV2(SCREEN_X), y = DEV2(SCREEN_Y);
+  int i = x, j = y;
 
   if (fillp) {
-    for (i = DEV2(SCREEN_X); flipyp ? i >=0 : i < window_height; flipyp ? i-- : i++)
-      for (j = DEV2(SCREEN_Y); flipxp ? j >=0 : j < window_width; flipxp? j-- : j++)
+    for (; flipyp ? i >=0 : i < window_height; flipyp ? i-- : i++)
+      for (j = x; flipxp ? j >=0 : j < window_width; flipxp? j-- : j++)
         target[(i*window_width)+j] = color;
   } else
-    target[(DEV2(SCREEN_Y)*window_width)+DEV2(SCREEN_X)] = color;
+    target[(y*window_width)+x] = color;
 
-  if (autoX) SDEV2(SCREEN_X, DEV2(SCREEN_X) + 1);
-  if (autoY) SDEV2(SCREEN_Y, DEV2(SCREEN_Y) + 1);
+#ifdef USE_SMART_DRAWING
+  minx = MIN(x, MIN(minx, x+j)), maxx = MAX(x, MAX(maxx, x+j));
+  miny = MIN(y, MIN(miny, y+i)), maxy = MAX(y, MAX(maxy, y+i));
+#endif
+
+  if (autoX) SDEV2(SCREEN_X, x+1);
+  if (autoY) SDEV2(SCREEN_Y, y+1);
 }
 
 static void
