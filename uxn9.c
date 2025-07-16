@@ -143,22 +143,21 @@ loop:
   case 0x15: {u16int pt = IT2(0, S, Q), v = IT2(1, S, Q); UN(op, Q, 3+_2);
       if (_2) MEM(pt) = v>>8, MEM(pt+1) = v; else MEM(pt) = v;
       NEXT(1); }
-  case 0x16: {u16int dev = IT(0, S, Q), res;
-      if (uxn->devices[dev]) res = uxn->devices[dev](1, 0); else
-#ifdef UXN9_FATAL_NODEVICE
-        sysfatal("unknown device %02x", dev);
-#else
-        res = 0;
-#endif
-      UN(op, Q, 1);
-      P(res, op, uxn);
-      NEXT(1);}
+  case 0x16: {u16int dev = IT(0, S, Q), v;
+               //print("DEI %02x\n", dev);
+              if (uxn->trigi[dev]) uxn->trigi[dev](uxn);
+              if (_2 && uxn->trigi[(dev+1)&0xff]) uxn->trigi[(dev+1)&0xff](uxn);
+              UN(op, Q, 1);
+              v = _2 ? DEV2(dev) : DEV(dev);
+              P(v, op, uxn);
+              NEXT(1);}
   case 0x17: {u16int dev = IT(0, S, Q), val = _2 ? IT2_(0, S, Q) : IT(1, S, Q);
+               //print("DEO %02x\n", dev);
       UN(op, Q, 2+_2);
-      if (uxn->devices[dev]) uxn->devices[dev](0, val);
-#ifdef UXN9_FATAL_NODEVICE
-      else sysfatal("unknown device %02x", dev);
-#endif
+      if (_2) SDEV2(dev, val)
+      else    SDEV(dev, val);
+      if (uxn->trigo[dev])                uxn->trigo[dev](uxn);
+      if (_2 && uxn->trigo[(dev+1)&0xff]) uxn->trigo[(dev+1)&0xff](uxn);
       NEXT(1);}
   case 0x18: BINOP(+, op, uxn);
   case 0x19: BINOP(-, op, uxn);

@@ -1,20 +1,20 @@
 #include "uxn9.h"
 
-#define SCREEN_VECTOR 0x20
-#define SCREEN_WIDTH  0x22
-#define SCREEN_HEIGHT 0x24
-#define SCREEN_AUTO   0x26
-#define SCREEN_X      0x28
-#define SCREEN_Y      0x2a
-#define SCREEN_ADDR   0x2c
-#define SCREEN_PIXEL  0x2e
-#define SCREEN_SPRITE 0x2f
-
-#define INITIAL_WINDOW_WIDTH (64*8)
+#define INITIAL_WINDOW_WIDTH  (64*8)
 #define INITIAL_WINDOW_HEIGHT (40*8)
 
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #define MAX(a,b) ((a)>(b)?(a):(b))
+
+#define BLEND(color, c) blending[color][c]
+
+#define window_width  (DEV2(SCREEN_WIDTH))
+#define window_height (DEV2(SCREEN_HEIGHT))
+
+#define autoN ((DEV(SCREEN_AUTO)&0xf0)>>4)
+#define autoX (DEV(SCREEN_AUTO)&1)
+#define autoY (DEV(SCREEN_AUTO)&(1<<1))
+#define autoA (DEV(SCREEN_AUTO)&(1<<2))
 
 int blending[4][16] = {
   {0, 0, 0, 0, 1, 0, 1, 1, 2, 2, 0, 2, 3, 3, 3, 0},
@@ -22,26 +22,7 @@ int blending[4][16] = {
   {1, 2, 3, 1, 1, 2, 3, 1, 1, 2, 3, 1, 1, 2, 3, 1},
   {2, 3, 1, 2, 2, 3, 1, 2, 2, 3, 1, 2, 2, 3, 1, 2}};
 
-#define BLEND(color, c) blending[color][c]
-
-static Uxn *current_uxn = nil;
 uint TARGET_FPS = 60;
-
-static u16int screen_vector = 0;
-extern u16int mouse_vector;
-extern u16int controller_vector;
-extern u8int current_button;
-extern u8int mouse_state;
-
-static u8int autoN = 0, autoX = 0, autoY = 0, autoA = 0;
-static u16int screen_addr = 0;
-
-extern Rune current_rune;
-
-static u16int window_width = INITIAL_WINDOW_WIDTH;
-static u16int window_height = INITIAL_WINDOW_HEIGHT;
-static u16int current_x = 0;
-static u16int current_y = 0;
 
 static int wctl_fd = 0;
 
@@ -65,7 +46,7 @@ u8int colors[] = {
 
 /* draw bg & fg onto sbuf */
 static void
-update_screen_buffer(void)
+update_screen_buffer(Uxn *uxn)
 {
   uint i, j, pt;
   u8int sel;
@@ -83,12 +64,12 @@ update_screen_buffer(void)
 }
 
 static void
-redraw(void)
+redraw(Uxn *uxn)
 {
   uint xr = screen->r.min.x,
        yr = screen->r.min.y;
 
-  update_screen_buffer();
+  update_screen_buffer(uxn);
 
   if (loadimage(img, img->r, (void*)sbuf, window_width*window_height*3) < 0)
     sysfatal("loadimage");
@@ -100,7 +81,7 @@ redraw(void)
 }
 
 static void
-update_window_size(void)
+update_window_size(Uxn *uxn)
 {
   Rectangle r;
 
@@ -118,7 +99,7 @@ update_window_size(void)
 }
 
 static void
-set_new_window_size(void)
+set_new_window_size(Uxn *uxn)
 {
   uint xr = screen->r.min.x,
        yr = screen->r.min.y;
@@ -141,7 +122,7 @@ set_new_window_size(void)
 }
 
 static void
-center_window(void)
+center_window(Uxn *uxn)
 {
   int cx = display->image->r.max.x/2;
   int cy = display->image->r.max.y/2;
@@ -152,59 +133,26 @@ center_window(void)
   //update_window_size();
 }
 
-static u16int
-screen_set_width(u8int getp, u16int w)
+static void
+screen_update_size(Uxn *uxn)
 {
-  if (getp)
-    return window_width;
-  window_width = w;
-  set_new_window_size();
-  return w;
+  set_new_window_size(uxn);
 }
-
-static u16int
-screen_set_height(u8int getp, u16int h)
-{
-  if (getp)
-    return window_height;
-  window_height = h;
-  set_new_window_size();
-  return h;
-}
-
-static u16int
-screen_set_x(u8int getp, u16int x)
-{
-  if (getp)
-    return current_x;
-  current_x = MIN(window_width, x);
-  return x;
-}
-
-static u16int
-screen_set_y(u8int getp, u16int y)
-{
-  if (getp)
-    return current_y;
-  current_y = MIN(window_height, y);
-  return y;
-}
-
-DEFGETSET(screen_set_vec, screen_vector);
-DEFGETSET(screen_set_addr, screen_addr);
 
 // 2bpp layer flipy flipx 3 2 1 0
 //                        \_____/- color
 
-static u16int
-screen_sprite(u8int getp, u16int dat)
+static void
+screen_sprite(Uxn *uxn)
 {
-  s32int i, j, A, tx, ty, x = current_x, y = current_y;
-  u8int _2bpp = 0b10000000&dat,
-        layer = 0b1000000&dat,
-        flipyp = 0b100000&dat,
-        flipxp = 0b10000&dat,
-        color = 0b1111&dat,
+  s32int i, j, A, tx, ty, x = DEV2(SCREEN_X), y = DEV2(SCREEN_Y);
+  u16int addr = DEV2(SCREEN_ADDR);
+  u8int dat     = DEV(SCREEN_SPRITE),
+        _2bpp   = 0b10000000&dat,
+        layer   = 0b1000000&dat,
+        flipyp  = 0b100000&dat,
+        flipxp  = 0b10000&dat,
+        color   = 0b1111&dat,
         *target = layer ? fg : bg,
         cur;
 
@@ -213,17 +161,14 @@ screen_sprite(u8int getp, u16int dat)
     sysfatal("autoX and autoY");
     */
 
-  if (getp)
-    return 0xff;
-
   for (A = 0; A < autoN + 1; ++A) {
     /* draw sprite */
     for (i = 0; i < 8; ++i) {
       for (j = 0; j < 8; ++j) {
         if (_2bpp)
-          cur = (((current_uxn->mem[screen_addr + i]>>(flipxp?j:7-j))&1))|(((current_uxn->mem[screen_addr + i + 8]>>(flipxp?j:7-j))&1)<<1);
+          cur = (((uxn->mem[addr + i]>>(flipxp?j:7-j))&1))|(((uxn->mem[addr + i + 8]>>(flipxp?j:7-j))&1)<<1);
         else
-          cur = ((current_uxn->mem[screen_addr + i])>>(flipxp?j:7-j))&0b1;
+          cur = ((uxn->mem[addr + i])>>(flipxp?j:7-j))&0b1;
         tx = x+j, ty = (y+(flipyp?7-i:i));
         if (ty < window_height && ty >= 0 && tx < window_width && ty >= 0)
           if (cur || color % 5) /* why */
@@ -234,85 +179,38 @@ screen_sprite(u8int getp, u16int dat)
 
     if (autoX) y = flipyp? y-8 : y+8;
     if (autoY) x = flipxp? x-8 : x+8;
-    if (autoA) screen_addr += _2bpp ? 16 : 8;
+    if (autoA) addr += _2bpp ? 16 : 8;
   }
 
-  if (autoX) current_x = flipxp ? x-8 : x+8;
-  if (autoY) current_y = flipyp ? y-8 : y+8;
-
-  return 0;
+  if (autoX) SDEV2(SCREEN_X, flipxp ? x-8 : x+8);
+  if (autoY) SDEV2(SCREEN_Y, flipyp ? y-8 : y+8);
+  if (autoA) SDEV2(SCREEN_ADDR, addr);
 }
 
 // fill layer flipy flipx 3 2 1 0
 //                            \_/- color
 
-static u16int
-screen_pixel(u8int getp, u16int dat)
+static void
+screen_pixel(Uxn *uxn)
 {
   int i, j;
-  u8int color = 0b11&dat,
-        fillp = 0b10000000&dat,
-        layer = 0b1000000&dat,
-        flipxp = 0b100000&dat,
-        flipyp = 0b10000&dat,
+  u8int dat     = DEV(SCREEN_PIXEL),
+        color   = 0b11&dat,
+        fillp   = 0b10000000&dat,
+        layer   = 0b1000000&dat,
+        flipxp  = 0b100000&dat,
+        flipyp  = 0b10000&dat,
         *target = layer ? fg : bg;
 
-  if (getp)
-    return 0xff;
-
-
   if (fillp) {
-    for (i = current_y; flipyp ? i >=0 : i < window_height; flipyp ? i-- : i++)
-      for (j = current_x; flipxp ? j >=0 : j < window_width; flipxp? j-- : j++)
+    for (i = DEV2(SCREEN_X); flipyp ? i >=0 : i < window_height; flipyp ? i-- : i++)
+      for (j = DEV2(SCREEN_Y); flipxp ? j >=0 : j < window_width; flipxp? j-- : j++)
         target[(i*window_width)+j] = color;
   } else
-    target[(current_y*window_width)+current_x] = color;
+    target[(DEV2(SCREEN_Y)*window_width)+DEV2(SCREEN_X)] = color;
 
-  if (autoX) current_x++;
-  if (autoY) current_y++;
-
-  return dat;
-}
-
-// 3 2 1 0 * A Y X
-
-static u16int
-screen_auto(u8int getp, u16int dat)
-{
-  if (getp)
-    return (autoN<<4)|autoX|autoY|autoA;
-  autoN = (dat&0xf0)>>4;
-  autoX = dat&1;
-  autoY = dat&(1<<1);
-  autoA = dat&(1<<2);
-  return 0;
-}
-
-void
-init_screen_device(Uxn *uxn)
-{
-  current_uxn = uxn;
-  wctl_fd = open("/dev/wctl", OREAD|OWRITE);
-  if (wctl_fd < 0)
-    sysfatal("wctl");
-
-  if (initdraw(nil, nil, argv0) < 0)
-    sysfatal("initdraw: %r");
-
-  set_new_window_size();
-
-  if ((mouse = initmouse(nil, screen)) == nil) sysfatal("initmouse: %r");
-  // if ((keyboard = initkeyboard(nil)) == nil) sysfatal("initkeyboard: %r");
-
-  uxn->devices[SCREEN_VECTOR] = screen_set_vec;
-  uxn->devices[SCREEN_WIDTH ] = screen_set_width;
-  uxn->devices[SCREEN_HEIGHT] = screen_set_height;
-  uxn->devices[SCREEN_AUTO  ] = screen_auto;
-  uxn->devices[SCREEN_X     ] = screen_set_x;
-  uxn->devices[SCREEN_Y     ] = screen_set_y;
-  uxn->devices[SCREEN_ADDR  ] = screen_set_addr;
-  uxn->devices[SCREEN_PIXEL ] = screen_pixel;
-  uxn->devices[SCREEN_SPRITE] = screen_sprite;
+  if (autoX) SDEV2(SCREEN_X, DEV2(SCREEN_X) + 1);
+  if (autoY) SDEV2(SCREEN_Y, DEV2(SCREEN_Y) + 1);
 }
 
 static void
@@ -335,10 +233,9 @@ screen_main_loop(Uxn *uxn)
 {
   int resiz[2];
   u16int run = 0x00ff;
-  current_uxn = uxn;
 
-  center_window();
-  update_window_size();
+  center_window(uxn);
+  update_window_size(uxn);
 
   Cursor *c = mallocz(sizeof(Cursor), 1);
   setcursor(mouse, c);
@@ -358,24 +255,50 @@ screen_main_loop(Uxn *uxn)
     };
     switch (alt(a)) {
     case CMOUSE:
-      mouse_state = mouse->buttons;
-      if (mouse_vector) {
+      SDEV(MOUSE_STATE, mouse->buttons);
+      if (DEV2(MOUSE_VECTOR)) {
         lock(&uxn->l);
-        uxn->pc = mouse_vector;
+        uxn->pc = DEV2(MOUSE_VECTOR);
         vm(uxn);
         unlock(&uxn->l);
       }
       break;
     case CREDRAW:
       lock(&uxn->l);
-      uxn->pc = screen_vector;
+      uxn->pc = DEV2(SCREEN_VECTOR);
       vm(uxn);
       unlock(&uxn->l);
-      redraw();
+      redraw(uxn);
       break;
     case CRESIZ:
-      update_window_size();
+      lock(&uxn->l);
+      update_window_size(uxn);
+      unlock(&uxn->l);
       break;
     }
   }
+}
+
+void
+init_screen_device(Uxn *uxn)
+{
+  SDEV2(SCREEN_WIDTH, INITIAL_WINDOW_WIDTH);
+  SDEV2(SCREEN_HEIGHT, INITIAL_WINDOW_HEIGHT);
+
+  wctl_fd = open("/dev/wctl", OREAD|OWRITE);
+  if (wctl_fd < 0)
+    sysfatal("wctl");
+
+  if (initdraw(nil, nil, argv0) < 0)
+    sysfatal("initdraw: %r");
+
+  set_new_window_size(uxn);
+
+  if ((mouse = initmouse(nil, screen)) == nil) sysfatal("initmouse: %r");
+  // if ((keyboard = initkeyboard(nil)) == nil) sysfatal("initkeyboard: %r");
+
+  uxn->trigo[SCREEN_WIDTH ] = screen_update_size;
+  uxn->trigo[SCREEN_HEIGHT] = screen_update_size;
+  uxn->trigo[SCREEN_PIXEL ] = screen_pixel;
+  uxn->trigo[SCREEN_SPRITE] = screen_sprite;
 }

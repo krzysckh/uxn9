@@ -1,15 +1,5 @@
 #include "uxn9.h"
 
-#define SYSTEM_EXPANSION 0x02
-#define SYSTEM_WST       0x04
-#define SYSTEM_RST       0x05
-#define SYSTEM_METADATA  0x06
-#define SYSTEM_RED       0x08
-#define SYSTEM_GREEN     0x0a
-#define SYSTEM_BLUE      0x0c
-#define SYSTEM_DEBUG     0x0e
-#define SYSTEM_STATE     0x0f
-
 /* There can be 0xffff banks with 0xffff bytes of memory each
  * i allocate them as a linked list. it's not the fastest but allows using all of the banks
  * in a random order with minimal memory consumption
@@ -22,13 +12,10 @@ typedef struct Bank
   struct Bank *next;
 } Bank;
 
-static Uxn *current_uxn = nil;
 static Bank *banks = nil;
 
 extern u8int colors[12];
 extern void print_stacks(Uxn *);
-
-static u16int system_current_metadata = 0;
 
 static Bank *
 mallocbank(u16int id)
@@ -86,18 +73,16 @@ system_set_color(u8int off, u16int dat)
   colors[off+9] = c4;
 }
 
-#define VAL(x)  x = current_uxn->mem[addr++]
-#define VAL2(x) x = (current_uxn->mem[addr]<<8)|current_uxn->mem[addr+1], addr += 2
+#define VAL(x)  x = uxn->mem[addr++]
+#define VAL2(x) x = (uxn->mem[addr]<<8)|uxn->mem[addr+1], addr += 2
 
-static u16int
-system_expansion(u8int getp, u16int addr)
+static void
+system_expansion(Uxn *uxn)
 {
   u8int op;
-  u16int a, b, c, d, e;
+  u16int a, b, c, d, e, addr = DEV2(SYSTEM_EXPANSION);
   Bank *B, *B2;
   enum {FILL = 0, CPYL = 1, CPYR = 2};
-  if (getp)
-    sysfatal("getp expansion");
 
   VAL(op);
   switch (op) {
@@ -124,62 +109,41 @@ system_expansion(u8int getp, u16int addr)
       memmove(B2->mem+e, B->mem+c, a); /* TODO: is this ok? */
     break;
   }
-
-  return 0;
 }
 
-// FIXME: getp color
-
-u16int
-system_red(u8int getp, u16int dat)
+static void
+system_red(Uxn *uxn)
 {
-  if (getp)
-    return 0;
-  system_set_color(2, dat);
-  return 0;
+  system_set_color(2, DEV2(SYSTEM_RED));
 }
 
-u16int
-system_green(u8int getp, u16int dat)
+static void
+system_green(Uxn *uxn)
 {
-  if (getp)
-    return 0;
-  system_set_color(1, dat);
-  return 0;
+  system_set_color(1, DEV2(SYSTEM_GREEN));
 }
 
-u16int
-system_blue(u8int getp, u16int dat)
+static void
+system_blue(Uxn *uxn)
 {
-  if (getp)
-    return 0;
-  system_set_color(0, dat);
-  return 0;
+  system_set_color(0, DEV2(SYSTEM_BLUE));
 }
 
-u16int
-system_state(u8int getp, u16int dat)
+static void
+system_state(Uxn *uxn)
 {
-  if (getp)
-    return 0;
-  if (0x7f&dat)
-    threadexitsall("non-normal termination");
-  threadexitsall(nil);
-  return 0;
+  if (DEV(SYSTEM_STATE)) {
+    if (0x7f&DEV(SYSTEM_STATE))
+      threadexitsall("non-normal termination");
+    threadexitsall(nil);
+  }
 }
 
-u16int
-system_debug(u8int getp, u16int dat)
+static void
+system_debug(Uxn *uxn)
 {
-  if (getp)
-    sysfatal("get debug?");
-  print_stacks(current_uxn);
-  return 0;
+  print_stacks(uxn);
 }
-
-DEFGETSET(system_metadata, system_current_metadata);
-DEFGETSET(system_wst, current_uxn->wstp);
-DEFGETSET(system_rst, current_uxn->rstp);
 
 void
 init_system_device(Uxn *uxn)
@@ -187,15 +151,11 @@ init_system_device(Uxn *uxn)
   banks = mallocbank(0); /* zero-bank */
   free(banks->mem);
   banks->mem = uxn->mem;
-  current_uxn = uxn;
 
-  uxn->devices[SYSTEM_RED      ] = system_red;
-  uxn->devices[SYSTEM_GREEN    ] = system_green;
-  uxn->devices[SYSTEM_BLUE     ] = system_blue;
-  uxn->devices[SYSTEM_STATE    ] = system_state;
-  uxn->devices[SYSTEM_METADATA ] = system_metadata;
-  uxn->devices[SYSTEM_DEBUG    ] = system_debug;
-  uxn->devices[SYSTEM_EXPANSION] = system_expansion;
-  uxn->devices[SYSTEM_WST      ] = system_wst;
-  uxn->devices[SYSTEM_RST      ] = system_rst;
+  uxn->trigo[SYSTEM_RED      ] = system_red;
+  uxn->trigo[SYSTEM_GREEN    ] = system_green;
+  uxn->trigo[SYSTEM_BLUE     ] = system_blue;
+  uxn->trigo[SYSTEM_STATE    ] = system_state;
+  uxn->trigo[SYSTEM_DEBUG    ] = system_debug;
+  uxn->trigo[SYSTEM_EXPANSION] = system_expansion;
 }
