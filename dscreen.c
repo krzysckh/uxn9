@@ -8,8 +8,9 @@
 
 #define BLEND(color, c) blending[color][c]
 
-#define window_width  (DEV2(SCREEN_WIDTH))
-#define window_height (DEV2(SCREEN_HEIGHT))
+#define _window_width  (DEV2(SCREEN_WIDTH))
+#define _window_height (DEV2(SCREEN_HEIGHT))
+#define WINSIZES u16int window_width = _window_width, window_height = _window_height
 
 #define autoN ((DEV(SCREEN_AUTO)&0xf0)>>4)
 #define autoX (DEV(SCREEN_AUTO)&1)
@@ -50,6 +51,7 @@ update_screen_buffer(Uxn *uxn)
 {
   uint i, j, pt;
   u8int sel;
+  WINSIZES;
 
   for (i = 0; i < window_height; ++i) {
     for (j = 0; j < window_width; ++j) {
@@ -68,6 +70,7 @@ redraw(Uxn *uxn)
 {
   uint xr = screen->r.min.x,
        yr = screen->r.min.y;
+  WINSIZES;
 
   update_screen_buffer(uxn);
 
@@ -84,6 +87,7 @@ static void
 update_window_size(Uxn *uxn)
 {
   Rectangle r;
+  WINSIZES;
 
   while (getwindow(display, Refnone) != 1)
     ;
@@ -103,6 +107,7 @@ set_new_window_size(Uxn *uxn)
 {
   uint xr = screen->r.min.x,
        yr = screen->r.min.y;
+  WINSIZES;
 
   // print("new window size: %dx%d\n", window_width, window_height);
 
@@ -124,6 +129,7 @@ set_new_window_size(Uxn *uxn)
 static void
 center_window(Uxn *uxn)
 {
+  WINSIZES;
   int cx = display->image->r.max.x/2;
   int cy = display->image->r.max.y/2;
   int x1 = cx - window_width/2;
@@ -145,7 +151,8 @@ screen_update_size(Uxn *uxn)
 static void
 screen_sprite(Uxn *uxn)
 {
-  s32int i, j, A, tx, ty, x = DEV2(SCREEN_X), y = DEV2(SCREEN_Y);
+  s32int i, j, A;
+  u16int tx, ty, x = DEV2(SCREEN_X), y = DEV2(SCREEN_Y);
   u16int addr = DEV2(SCREEN_ADDR);
   u8int dat     = DEV(SCREEN_SPRITE),
         _2bpp   = 0b10000000&dat,
@@ -155,6 +162,7 @@ screen_sprite(Uxn *uxn)
         color   = 0b1111&dat,
         *target = layer ? fg : bg,
         cur;
+  WINSIZES;
 
   /*
   if (autoX && autoY)
@@ -170,7 +178,7 @@ screen_sprite(Uxn *uxn)
         else
           cur = ((uxn->mem[addr + i])>>(flipxp?j:7-j))&0b1;
         tx = x+j, ty = (y+(flipyp?7-i:i));
-        if (ty < window_height && ty >= 0 && tx < window_width && ty >= 0)
+        if (ty < window_height && tx < window_width)
           if (cur || color % 5) /* why */
             target[ty*window_width + tx] = BLEND(cur, color);
       }
@@ -201,6 +209,7 @@ screen_pixel(Uxn *uxn)
         flipxp  = 0b100000&dat,
         flipyp  = 0b10000&dat,
         *target = layer ? fg : bg;
+  WINSIZES;
 
   if (fillp) {
     for (i = DEV2(SCREEN_X); flipyp ? i >=0 : i < window_height; flipyp ? i-- : i++)
@@ -295,7 +304,6 @@ init_screen_device(Uxn *uxn)
   set_new_window_size(uxn);
 
   if ((mouse = initmouse(nil, screen)) == nil) sysfatal("initmouse: %r");
-  // if ((keyboard = initkeyboard(nil)) == nil) sysfatal("initkeyboard: %r");
 
   uxn->trigo[SCREEN_WIDTH ] = screen_update_size;
   uxn->trigo[SCREEN_HEIGHT] = screen_update_size;
