@@ -247,9 +247,11 @@ screen_pixel(Uxn *uxn)
   if (fillp) {
     for (; flipyp ? i >=0 : i < window_height; flipyp ? i-- : i++)
       for (j = x; flipxp ? j >=0 : j < window_width; flipxp? j-- : j++)
-        target[(i*window_width)+j] = color;
+        if (i < window_height && j < window_width)
+          target[(i*window_width)+j] = color;
   } else
-    target[(y*window_width)+x] = color;
+    if (y < window_height && x < window_width)
+      target[(y*window_width)+x] = color;
 
   if (autoX) SDEV2(SCREEN_X, x+1);
   if (autoY) SDEV2(SCREEN_Y, y+1);

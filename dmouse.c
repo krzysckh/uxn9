@@ -2,13 +2,13 @@
 
 extern uint resized, SX, SY;
 extern int do_exit;
-int mouse, cursor;
+int mouse = -1, cursor = -1;
 
 void
 mouse_thread(void *arg)
 {
   static Cursor c;
-  s8int buf[1 + 4*12];
+  s8int buf[1 + 5*12];
   Uxn *uxn = (Uxn *)arg;
   int n;
 
@@ -20,7 +20,7 @@ mouse_thread(void *arg)
 
   write(cursor, &c, sizeof(c));
 
-  while (!do_exit && (n = read(mouse, buf, sizeof(buf)))) {
+  while (!do_exit && (n = read(mouse, buf, 49))) {
     switch (*buf) {
     case 'r': resized = 1; /* fallthrough */
     case 'm':
