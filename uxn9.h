@@ -63,6 +63,7 @@ void init_console_device(Uxn *);
 
 void init_screen_device(Uxn *);
 void screen_main_loop(Uxn *);
+void exitall(char *);
 extern uint TARGET_FPS;
 extern uint DEBUG_SMART_DRAWING;
 
@@ -87,6 +88,7 @@ void init_file_device(Uxn *);
 #define MOUSE_STATE  0x96
 
 void init_mouse_device(Uxn *);
+void mouse_thread(void *);
 
 /* datetime */
 

@@ -8,7 +8,9 @@
 // down
 // left
 // right
-//
+
+extern int do_exit;
+
 void
 btn_thread(void *arg)
 {
@@ -21,7 +23,7 @@ btn_thread(void *arg)
   if (fd < 0)
     sysfatal("devkbd");
 
-  for (;;) {
+  while (!do_exit) {
     if ((nread = read(fd, b, sizeof(b)-1))) {
       bv = b;
       lock(&uxn->l);
@@ -31,7 +33,7 @@ btn_thread(void *arg)
 loop: while (*bv) {
         switch (*bv) {
         case 'c':
-          if (utfrune(bv, Kdel)) sysfatal("delete");
+          if (utfrune(bv, Kdel)) exitall(nil);
           break;
         case 'k': /* keydown */
           bev = 1;
@@ -71,14 +73,14 @@ loop: while (*bv) {
           while (*bv) {
             bv += chartorune(&r, bv);
             switch (r) {
-            case Kctl:   bev = 1, button &= ~1;      break;
-            case Kalt:   bev = 1, button &= ~(1<<1); break;
-            case Kshift: bev = 1, button &= ~(1<<2); break;
-            case Khome:  bev = 1, button &= ~(1<<3); break;
-            case Kup:    bev = 1, button &= ~(1<<4); break;
-            case Kdown:  bev = 1, button &= ~(1<<5); break;
-            case Kleft:  bev = 1, button &= ~(1<<6); break;
-            case Kright: bev = 1, button &= ~(1<<7); break;
+            case Kctl:   button &= ~1;      break;
+            case Kalt:   button &= ~(1<<1); break;
+            case Kshift: button &= ~(1<<2); break;
+            case Khome:  button &= ~(1<<3); break;
+            case Kup:    button &= ~(1<<4); break;
+            case Kdown:  button &= ~(1<<5); break;
+            case Kleft:  button &= ~(1<<6); break;
+            case Kright: button &= ~(1<<7); break;
             default:
               ;
             }
@@ -97,11 +99,15 @@ loop: while (*bv) {
       unlock(&uxn->l);
     }
   }
+
+  close(fd);
+  threadexitsall(nil);
 }
 
 // TODO: maybe move the start of btn_thread here
 void
 init_controller_device(Uxn *uxn)
 {
-  USED(uxn);
+  proccreate(btn_thread, uxn, 1024);
+
 }

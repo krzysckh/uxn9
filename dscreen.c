@@ -26,6 +26,8 @@ int blending[4][16] = {
 uint TARGET_FPS = 60;
 uint DEBUG_SMART_DRAWING = 0;
 
+uint resized = 0, SX = 0, SY = 0;
+
 static int wctl_fd = 0;
 
 #ifdef USE_SMART_DRAWING
@@ -40,7 +42,6 @@ static Image *img = nil;
 static int resizeskip = 0;
 
 static Keyboardctl *keyboard = nil;
-Mousectl *mouse = nil;
 
 u8int colors[] = {
   /*B   G     R */
@@ -111,6 +112,8 @@ update_window_size(Uxn *uxn)
 
   while (getwindow(display, Refnone) != 1)
     ;
+
+  SX = screen->r.min.x, SY = screen->r.min.y; // <- this sucks
 
   r = Rect(0, 0, window_width, window_height);
   if (img)
@@ -256,69 +259,42 @@ screen_pixel(Uxn *uxn)
 #endif
 }
 
-static void
-frame_thread(void *arg)
+int do_exit = 0;
+
+void
+exitall(char *mesg)
 {
-  Channel *c = (Channel*)arg;
-
-  vlong target_timeout_ns = 1000000000/TARGET_FPS, next;
-
-  for (;;) {
-    next = nsec() + target_timeout_ns;
-    while (nsec() <= next) // how do i avoid busylooping?
-      yield();
-    send(c, nil);
-  }
+  do_exit = 1;
+  // postnote(PNPROC, threadpid(pidb), "shutdown");
+  // postnote(PNPROC, threadpid(pidm), "shutdown");
+  threadexitsall(mesg);
 }
 
 void
 screen_main_loop(Uxn *uxn)
 {
-  int resiz[2];
   u16int run = 0x00ff;
+  vlong target_timeout_ns = 1000000000/TARGET_FPS, was, slp;
 
   center_window(uxn);
   update_window_size(uxn);
 
-  Cursor *c = mallocz(sizeof(Cursor), 1);
-  setcursor(mouse, c);
+  while (do_exit == 0) {
+    lock(&uxn->l);
 
-  Channel *drawch = chancreate(1, 1);
-  u8int _;
-  threadcreate(frame_thread, drawch, 1024);
-  proccreate(btn_thread, uxn, 1024);
-
-  enum { CMOUSE, CRESIZ, CREDRAW };
-  while (run /*--*/) {
-    Alt a[] = {
-      { mouse->c,       &mouse->Mouse,   CHANRCV },
-      { mouse->resizec, &resiz,          CHANRCV },
-      { drawch,         &_,              CHANRCV }, /* draw interrupt channel */
-      { nil,            nil,             CHANEND }
-    };
-    switch (alt(a)) {
-    case CMOUSE:
-      SDEV(MOUSE_STATE, mouse->buttons);
-      if (DEV2(MOUSE_VECTOR)) {
-        lock(&uxn->l);
-        uxn->pc = DEV2(MOUSE_VECTOR);
-        vm(uxn);
-        unlock(&uxn->l);
-      }
-      break;
-    case CREDRAW:
-      lock(&uxn->l);
-      uxn->pc = DEV2(SCREEN_VECTOR);
-      vm(uxn);
-      unlock(&uxn->l);
-      redraw(uxn);
-      break;
-    case CRESIZ:
-      lock(&uxn->l);
+    if (resized) {
       update_window_size(uxn);
-      unlock(&uxn->l);
-      break;
+      resized = 0;
     }
+    was = nsec();
+    uxn->pc = DEV2(SCREEN_VECTOR);
+    vm(uxn);
+    unlock(&uxn->l);
+    redraw(uxn);
+
+    slp = target_timeout_ns - (nsec() - was);
+    if (slp)
+      sleep(slp/1000000);
   }
 }
 
@@ -336,8 +312,6 @@ init_screen_device(Uxn *uxn)
     sysfatal("initdraw: %r");
 
   set_new_window_size(uxn);
-
-  if ((mouse = initmouse(nil, screen)) == nil) sysfatal("initmouse: %r");
 
   uxn->trigo[SCREEN_WIDTH ] = screen_update_size;
   uxn->trigo[SCREEN_HEIGHT] = screen_update_size;

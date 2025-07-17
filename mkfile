@@ -16,3 +16,6 @@ OFILES=\
   dscreen.$O \
 
 </sys/src/cmd/mkone
+
+# profiling
+# LDFLAGS=-p

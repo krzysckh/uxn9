@@ -1,22 +1,52 @@
 #include "uxn9.h"
 
-extern Mousectl *mouse;
+extern uint resized, SX, SY;
+extern int do_exit;
+int mouse, cursor;
 
-static void
-mouse_x(Uxn *uxn)
+void
+mouse_thread(void *arg)
 {
-  SDEV2(MOUSE_X, mouse->xy.x - screen->r.min.x);
-}
+  static Cursor c;
+  s8int buf[1 + 4*12];
+  Uxn *uxn = (Uxn *)arg;
+  int n;
 
-static void
-mouse_y(Uxn *uxn)
-{
-  SDEV2(MOUSE_Y, mouse->xy.y - screen->r.min.y);
+  mouse = open("/dev/mouse", ORDWR);
+  cursor = open("/dev/cursor", ORDWR);
+
+  if (mouse < 0 || cursor < 0)
+    sysfatal("mouse or cursor");
+
+  write(cursor, &c, sizeof(c));
+
+  while (!do_exit && (n = read(mouse, buf, sizeof(buf)))) {
+    switch (*buf) {
+    case 'r': resized = 1; /* fallthrough */
+    case 'm':
+      lock(&uxn->l);
+      SDEV2(MOUSE_X, atoi(buf+1+0*12) - SX);
+      SDEV2(MOUSE_Y, atoi(buf+1+1*12) - SY);
+      SDEV(MOUSE_STATE, atoi(buf+1+2*12));
+      if (DEV2(MOUSE_VECTOR)) {
+        uxn->pc = DEV2(MOUSE_VECTOR);
+        vm(uxn);
+      }
+      unlock(&uxn->l);
+      break;
+    default:
+      print("uhh %s\n", buf);
+    }
+  }
+
+  close(mouse);
+  close(cursor);
+
+  threadexitsall(nil);
 }
 
 void
 init_mouse_device(Uxn *uxn)
 {
-  uxn->trigi[MOUSE_X] = mouse_x;
-  uxn->trigi[MOUSE_Y] = mouse_y;
+  proccreate(mouse_thread, uxn, 1024);
 }

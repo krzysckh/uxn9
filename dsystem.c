@@ -134,8 +134,8 @@ system_state(Uxn *uxn)
 {
   if (DEV(SYSTEM_STATE)) {
     if (0x7f&DEV(SYSTEM_STATE))
-      threadexitsall("non-normal termination");
-    threadexitsall(nil);
+      exitall("non-normal termination");
+    exitall(nil);
   }
 }
 

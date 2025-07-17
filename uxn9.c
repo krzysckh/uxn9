@@ -219,9 +219,11 @@ threadmain(int argc, char **argv)
   init_controller_device(uxn);
   init_file_device(uxn);
 
+  lock(&uxn->l);
   vm(uxn);
+  unlock(&uxn->l);
   //proccreate(screen_main_loop, uxn, mainstacksize);
   screen_main_loop(uxn);
 
-  //threadexitsall(nil);
+  threadexitsall(nil);
 }
