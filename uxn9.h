@@ -43,11 +43,14 @@ void vm(Uxn *);
 void init_system_device(Uxn *);
 
 /* console */
-#define CONSOLE_WRITE 0x18
-#define CONSOLE_ERROR 0x19
-#define CONSOLE_TYPE  0x17
+#define CONSOLE_VECTOR 0x10
+#define CONSOLE_READ   0x12
+#define CONSOLE_TYPE   0x17
+#define CONSOLE_WRITE  0x18
+#define CONSOLE_ERROR  0x19
 
 void init_console_device(Uxn *);
+void console_main_loop(void *);
 
 /* screen */
 
@@ -79,6 +82,7 @@ extern uint DEBUG_SMART_DRAWING;
 #define FILE_WRITE   0xae
 
 void init_file_device(Uxn *);
+void close_file_device(Uxn *);
 
 /* mouse */
 

@@ -144,7 +144,7 @@ loop:
       if (_2) MEM(pt) = v>>8, MEM(pt+1) = v; else MEM(pt) = v;
       NEXT(1); }
   case 0x16: {u16int dev = IT(0, S, Q), v;
-               //print("DEI %02x\n", dev);
+              // print("DEI %02x\n", dev);
               if (uxn->trigi[dev]) uxn->trigi[dev](uxn);
               if (_2 && uxn->trigi[(dev+1)&0xff]) uxn->trigi[(dev+1)&0xff](uxn);
               UN(op, Q, 1);
@@ -152,7 +152,7 @@ loop:
               P(v, op, uxn);
               NEXT(1);}
   case 0x17: {u16int dev = IT(0, S, Q), val = _2 ? IT2_(0, S, Q) : IT(1, S, Q);
-               //print("DEO %02x\n", dev);
+               // print("DEO %02x val=%04x\n", dev, val);
       UN(op, Q, 2+_2);
       if (_2) SDEV2(dev, val)
       else    SDEV(dev, val);
@@ -179,8 +179,11 @@ loop:
 
 /* FIXME: move to some header */
 extern char **console_argv;
+extern int console_argc;
 
 /* note to future self: cannot alloc big structs on stack with libthread */
+
+u8int uxnclip = 0;
 
 void
 threadmain(int argc, char **argv)
@@ -199,10 +202,12 @@ threadmain(int argc, char **argv)
     default: usage();
   } ARGEND;
 
-  if (argc != 1) usage();
+  if (strcmp(argv0, "uxncli") == 0)
+    uxnclip = 1;
+
+  if (argc < 1) usage();
 
   fd = open(argv[0], OREAD);
-  console_argv = argv+1;
   if (fd < 0)
     sysfatal("couldn't read file %s", argv[0]);
   int rd = read(fd, mem+0x100, (1<<16)-0x100);
@@ -211,19 +216,32 @@ threadmain(int argc, char **argv)
   uxn->mem = mem;
   uxn->pc = 0x100;
 
+  console_argv = argv+1;
+  console_argc = argc-1;
+
   init_system_device(uxn);
   init_console_device(uxn);
-  init_screen_device(uxn);
-  init_mouse_device(uxn);
   init_datetime_device(uxn);
-  init_controller_device(uxn);
   init_file_device(uxn);
+  if (!uxnclip) {
+    init_screen_device(uxn);
+    init_mouse_device(uxn);
+    init_controller_device(uxn);
+  }
 
   lock(&uxn->l);
   vm(uxn);
   unlock(&uxn->l);
-  //proccreate(screen_main_loop, uxn, mainstacksize);
-  screen_main_loop(uxn);
+
+  if (uxnclip)
+    console_main_loop(uxn);
+  else
+    proccreate(console_main_loop, uxn, mainstacksize);
+
+  if (!uxnclip)
+    screen_main_loop(uxn);
+
+  close_file_device(uxn);
 
   threadexitsall(nil);
 }

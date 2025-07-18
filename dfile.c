@@ -23,8 +23,19 @@ HACK(file_delete, {
   remove((char*)uxn->mem+DEVF2(FILE_NAME));
 });
 
+static void
+maybe_create(char *name)
+{
+  int fd = open(name, OREAD);
+  if (fd > 0)
+    close(fd);
+  else
+    create(name,  OREAD|OEXCL, 0666);
+}
+
 HACK(file_name, {
   int mode = ORDWR;
+  char *name;
   Dir *d;
   if (DEVF(FILE_APPEND))
     sysfatal("TODO: file_append");
@@ -32,10 +43,15 @@ HACK(file_name, {
   if (fds[current_file] > 0)
     close(fds[current_file]);
 
-  fds[current_file] = open((char*)uxn->mem+DEVF2(FILE_NAME), mode);
+  name = (char*)uxn->mem+DEVF2(FILE_NAME);
+  maybe_create(name);
+  fds[current_file] = open(name, mode);
 
+  // print("file: %s", (char*)uxn->mem+DEVF2(FILE_NAME));
+  /*
   if ((d = dirfstat(fds[current_file])) != nil)
-    sysfatal("dir unsupported");
+    sysfatal("dir unsupported: %s", (char*)uxn->mem+DEVF2(FILE_NAME));
+    */
 });
 
 HACK(file_read, {
@@ -66,4 +82,12 @@ init_file_device(Uxn *uxn)
   uxn->trigo[0x10+FILE_WRITE  ] = file_write2;
   uxn->trigo[0x10+FILE_NAME   ] = file_name2;
   uxn->trigo[0x10+FILE_DELETE ] = file_delete2;
+}
+
+void
+close_file_device(Uxn *uxn)
+{
+  USED(uxn);
+  if (fds[0] > 0) close(fds[0]);
+  if (fds[1] > 0) close(fds[1]);
 }

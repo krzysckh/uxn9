@@ -7,8 +7,8 @@ state:
     - screen device
     - datetime device
     - controller device
-  * implemented partially:
     - console device
+  * implemented partially:
     - mouse device
     - file device
   * not implemented
@@ -18,6 +18,9 @@ INSTALLATION
 
   ; mk
   ; mk install
+
+  if you wish to use uxncli, duplicate `uxn9' to a `uxncli' file.
+  it can act as it.
 
 USAGE
 
