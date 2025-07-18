@@ -47,7 +47,7 @@ HACK(file_name, {
   maybe_create(name);
   fds[current_file] = open(name, mode);
 
-  // print("file: %s", (char*)uxn->mem+DEVF2(FILE_NAME));
+  print("file %d: %s", current_file, (char*)uxn->mem+DEVF2(FILE_NAME));
   /*
   if ((d = dirfstat(fds[current_file])) != nil)
     sysfatal("dir unsupported: %s", (char*)uxn->mem+DEVF2(FILE_NAME));

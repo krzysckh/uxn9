@@ -130,13 +130,22 @@ system_blue(Uxn *uxn)
 }
 
 static void
-system_state(Uxn *uxn)
+handle_quit(void *arg)
 {
+  Uxn *uxn = (Uxn *)arg;
+  lock(&uxn->l); // wait until current vector is finished
+  unlock(&uxn->l);
   if (DEV(SYSTEM_STATE)) {
     if (0x7f&DEV(SYSTEM_STATE))
       exitall("non-normal termination");
     exitall(nil);
   }
+}
+
+static void
+system_state(Uxn *uxn)
+{
+  proccreate(handle_quit, uxn, mainstacksize);
 }
 
 static void
