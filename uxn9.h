@@ -86,10 +86,12 @@ void close_file_device(Uxn *);
 
 /* mouse */
 
-#define MOUSE_VECTOR 0x90
-#define MOUSE_X      0x92
-#define MOUSE_Y      0x94
-#define MOUSE_STATE  0x96
+#define MOUSE_VECTOR  0x90
+#define MOUSE_X       0x92
+#define MOUSE_Y       0x94
+#define MOUSE_STATE   0x96
+#define MOUSE_SCROLLX 0x9a
+#define MOUSE_SCROLLY 0x9c
 
 void init_mouse_device(Uxn *);
 void mouse_thread(void *);

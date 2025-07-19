@@ -8,8 +8,8 @@ state:
     - datetime device
     - controller device
     - console device
-  * implemented partially:
     - mouse device
+  * implemented partially:
     - file device
   * not implemented
     - audio device

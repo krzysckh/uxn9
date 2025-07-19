@@ -10,6 +10,7 @@ mouse_thread(void *arg)
   static Cursor c;
   s8int buf[1 + 5*12];
   Uxn *uxn = (Uxn *)arg;
+  uint state;
   int n;
 
   mouse = open("/dev/mouse", ORDWR);
@@ -25,9 +26,15 @@ mouse_thread(void *arg)
     case 'r': resized = 1; /* fallthrough */
     case 'm':
       lock(&uxn->l);
-      SDEV2(MOUSE_X, atoi(buf+1+0*12) - SX);
-      SDEV2(MOUSE_Y, atoi(buf+1+1*12) - SY);
-      SDEV(MOUSE_STATE, atoi(buf+1+2*12));
+      state = atoi(buf+1+2*12);
+      if (state&(8|16)) {
+        SDEV2(MOUSE_SCROLLX, 0);
+        SDEV2(MOUSE_SCROLLY, (state&8) ? 1 : -1);
+      } else {
+        SDEV2(MOUSE_X, atoi(buf+1+0*12) - SX);
+        SDEV2(MOUSE_Y, atoi(buf+1+1*12) - SY);
+        SDEV(MOUSE_STATE, state);
+      }
       if (DEV2(MOUSE_VECTOR)) {
         uxn->pc = DEV2(MOUSE_VECTOR);
         vm(uxn);
