@@ -29,7 +29,7 @@ mouse_thread(void *arg)
       state = atoi(buf+1+2*12);
       if (state&(8|16)) {
         SDEV2(MOUSE_SCROLLX, 0);
-        SDEV2(MOUSE_SCROLLY, (state&8) ? 1 : -1);
+        SDEV2(MOUSE_SCROLLY, (state&8) ? -1 : 1);
       } else {
         SDEV2(MOUSE_X, atoi(buf+1+0*12) - SX);
         SDEV2(MOUSE_Y, atoi(buf+1+1*12) - SY);
@@ -39,6 +39,7 @@ mouse_thread(void *arg)
         uxn->pc = DEV2(MOUSE_VECTOR);
         vm(uxn);
       }
+      SDEV2(MOUSE_SCROLLY, 0);
       unlock(&uxn->l);
       break;
     default:

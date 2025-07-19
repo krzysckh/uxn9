@@ -33,9 +33,25 @@ maybe_create(char *name)
     create(name,  OREAD|OEXCL, 0666);
 }
 
+static u8int
+dirp(char *dir, char *name)
+{
+  char *buf = malloc(strlen(dir) + strlen(name) + 16), res;
+  Dir *d;
+  sprint(buf, "%s%s%s", dir, strlen(dir) ? "/" : "", name);
+  d = dirstat(buf);
+  res = (d && d->mode & DMDIR);
+  free(d);
+  free(buf);
+  return res;
+}
+
 HACK(file_name, {
   int mode = ORDWR;
+  int n;
+  int fd;
   char *name;
+  char *tname;
   Dir *d;
   if (DEVF(FILE_APPEND))
     sysfatal("TODO: file_append");
@@ -44,14 +60,30 @@ HACK(file_name, {
     close(fds[current_file]);
 
   name = (char*)uxn->mem+DEVF2(FILE_NAME);
-  maybe_create(name);
-  fds[current_file] = open(name, mode);
 
+  if (dirp("", name)) {
+    fd = open(name, OREAD);
+    n = dirreadall(fd, &d);
+    close(fd);
+    tname = mktemp("/tmp/uxn9-XXXXXXXXXXX");
+    maybe_create(tname);
+    fd = open(tname, ORDWR|ORCLOSE);
+    while (n--) {
+      if (dirp(name, d->name))
+        fprint(fd, "---- %s/\n", d->name);
+      else if (d->length > 0xffff)
+        fprint(fd, "???? %s\n", d->name);
+      else
+        fprint(fd, "%04x %s\n", (u16int)(d->length&0xffff), d->name);
+      d++;
+    }
+    seek(fd, 0, 0);
+    fds[current_file] = fd;
+  } else {
+    maybe_create(name);
+    fds[current_file] = open(name, mode);
+  }
   // print("file %d: %s", current_file, (char*)uxn->mem+DEVF2(FILE_NAME));
-  /*
-  if ((d = dirfstat(fds[current_file])) != nil)
-    sysfatal("dir unsupported: %s", (char*)uxn->mem+DEVF2(FILE_NAME));
-    */
 });
 
 HACK(file_read, {
