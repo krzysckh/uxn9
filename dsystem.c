@@ -1,58 +1,26 @@
 #include "uxn9.h"
 
-/* There can be 0xffff banks with 0xffff bytes of memory each
- * i allocate them as a linked list. it's not the fastest but allows using all of the banks
- * in a random order with minimal memory consumption
+#define NBANKS 255
+
+/* There can be NBANKS banks with 1<<16 bytes of memory each.
+ * they're allocated on-demand
  */
 
-typedef struct Bank
-{
-  u16int id;
-  u8int *mem;
-  struct Bank *next;
-} Bank;
-
-static Bank *banks = nil;
+static u8int *banks[NBANKS] = {0};
 
 extern u8int colors[12];
 extern void print_stacks(Uxn *);
 
-static Bank *
-mallocbank(u16int id)
+u8int *
+system_getbank(u16int id)
 {
-  Bank *b = mallocz(sizeof(Bank), 1);
-  b->mem = mallocz(0xffff, 1);
-  b->id = id;
+  if (id >= NBANKS)
+    sysfatal("asked for bank with id=%d, NBANKS=%d. bump NBANKS.", id, NBANKS);
 
-  return b;
-}
+  if (!banks[id])
+    banks[id] = mallocz(1<<16, 1);
 
-static Bank *
-getbank(u16int id)
-{
-  Bank *cur;
-
-  /* initialize banks if there's none allocd */
-  if (banks == nil) {
-    banks = mallocbank(id);
-    return banks;
-  }
-
-  cur = banks;
-
-  /* O(n) search for the right bank */
-  while (1) {
-    if (cur->id == id)
-      return cur;
-    if (cur->next)
-      cur = cur->next;
-    else
-      break;
-  }
-
-  /* allocate and stash if not found */
-  cur->next = mallocbank(id);
-  return cur->next;
+  return banks[id];
 }
 
 static void
@@ -81,7 +49,7 @@ system_expansion(Uxn *uxn)
 {
   u8int op;
   u16int a, b, c, d, e, addr = DEV2(SYSTEM_EXPANSION);
-  Bank *B, *B2;
+  u8int *B, *B2;
   enum {FILL = 0, CPYL = 1, CPYR = 2};
 
   VAL(op);
@@ -91,8 +59,8 @@ system_expansion(Uxn *uxn)
     VAL2(b);
     VAL2(c);
     VAL(d);
-    B = getbank(b);
-    memset(B->mem+c, d&0xff, a);
+    B = system_getbank(b);
+    memset(B+c, d&0xff, a);
     break;
   case CPYL:
   case CPYR:
@@ -101,12 +69,12 @@ system_expansion(Uxn *uxn)
     VAL2(c); /* addr  */
     VAL2(d); /* dstb  */
     VAL2(e); /* addr' */
-    // print("CPY len=%d src=%d addr=%d dst=%d addr'=%d\n", a, b, c, d, e);
-    B = getbank(b), B2 = getbank(d);
+    print("CPY (%s) len=%d src=%d addr=%d dst=%d addr'=%d\n", op == CPYL ? "CPYL" : "CPYR", a, b, c, d, e);
+    B = system_getbank(b), B2 = system_getbank(d);
     if (op == CPYL)
-      memcpy(B2->mem+e, B->mem+c, a);
+      memcpy(B2+e, B+c, a);
     else
-      memmove(B2->mem+e, B->mem+c, a); /* TODO: is this ok? */
+      memmove(B2+e, B+c, a); /* TODO: is this ok? */
     break;
   }
 }
@@ -157,9 +125,7 @@ system_debug(Uxn *uxn)
 void
 init_system_device(Uxn *uxn)
 {
-  banks = mallocbank(0); /* zero-bank */
-  free(banks->mem);
-  banks->mem = uxn->mem;
+  banks[0] = uxn->mem;
 
   uxn->trigo[SYSTEM_RED      ] = system_red;
   uxn->trigo[SYSTEM_GREEN    ] = system_green;

@@ -190,7 +190,7 @@ threadmain(int argc, char **argv)
 {
   Uxn *uxn = mallocz(sizeof(Uxn), 1);
   u8int *mem = mallocz(1<<16, 1);
-  int fd;
+  int fd, nb = 1, rd;
 
   ARGBEGIN {
     case 'f':
@@ -210,7 +210,12 @@ threadmain(int argc, char **argv)
   fd = open(argv[0], OREAD);
   if (fd < 0)
     sysfatal("couldn't read file %s", argv[0]);
-  int rd = read(fd, mem+0x100, (1<<16)-0x100);
+  read(fd, mem+0x100, (1<<16)-0x100);
+  while (1) {
+    rd = read(fd, system_getbank(nb++), 1<<16);
+    if (rd < (1<<16))
+      break;
+  }
   close(fd);
 
   uxn->mem = mem;

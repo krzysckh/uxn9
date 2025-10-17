@@ -41,6 +41,7 @@ void vm(Uxn *);
 #define SYSTEM_STATE     0x0f
 
 void init_system_device(Uxn *);
+u8int *system_getbank(u16int);
 
 /* console */
 #define CONSOLE_VECTOR 0x10
