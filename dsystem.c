@@ -69,7 +69,7 @@ system_expansion(Uxn *uxn)
     VAL2(c); /* addr  */
     VAL2(d); /* dstb  */
     VAL2(e); /* addr' */
-    print("CPY (%s) len=%d src=%d addr=%d dst=%d addr'=%d\n", op == CPYL ? "CPYL" : "CPYR", a, b, c, d, e);
+    /* print("CPY (%s) len=%d src=%d addr=%d dst=%d addr'=%d\n", op == CPYL ? "CPYL" : "CPYR", a, b, c, d, e); */
     B = system_getbank(b), B2 = system_getbank(d);
     if (op == CPYL)
       memcpy(B2+e, B+c, a);
