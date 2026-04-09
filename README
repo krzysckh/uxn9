@@ -29,3 +29,19 @@ USAGE
   -f number  changes the target fps
   -S         turns on smart drawing debug mode on
 
+BUGS and ISSUES
+
+  - KNOWN
+
+    * left does not render properly
+    * color palette is wrong-ish in some circumstances
+
+  - UNKNOWN
+
+    Upon discovery, if compassionate, please e-mail
+    kpm AT krzysckh DOT org with steps to reproduce OR fill an issue
+    on github. If more generous than average, send patches
+    to upppermentioned address OR open pull requests on github.
+    Thank you.
+
+- kpm
