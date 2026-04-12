@@ -87,6 +87,8 @@ void
 vm(Uxn *uxn)
 {
   u8int op;
+  if (!uxn->running)
+    return;
 loop:
   op = uxn->mem[uxn->pc];
   u8int K = KEEPP(op), _2 = SHORTP(op);
@@ -220,6 +222,7 @@ threadmain(int argc, char **argv)
 
   uxn->mem = mem;
   uxn->pc = 0x100;
+  uxn->running = 1;
 
   console_argv = argv+1;
   console_argc = argc-1;

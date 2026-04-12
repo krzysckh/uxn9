@@ -22,6 +22,7 @@ struct Uxn
   Dev   trigi[0x100]; // trigger in
   Dev   trigo[0x100]; // trigger out
   u8int dev[0x100];
+  u8int running;
 };
 
 void vm(Uxn *);
@@ -67,7 +68,7 @@ void console_main_loop(void *);
 
 void init_screen_device(Uxn *);
 void screen_main_loop(Uxn *);
-void exitall(char *);
+void exitall(Uxn *, char *);
 extern uint TARGET_FPS;
 extern uint DEBUG_SMART_DRAWING;
 

@@ -1,7 +1,6 @@
 #include "uxn9.h"
 
 extern uint resized, SX, SY;
-extern int do_exit;
 int mouse = -1, cursor = -1;
 
 void
@@ -21,7 +20,7 @@ mouse_thread(void *arg)
 
   write(cursor, &c, sizeof(c));
 
-  while (!do_exit && (n = read(mouse, buf, 49))) {
+  while (uxn->running && (n = read(mouse, buf, 49))) {
     switch (*buf) {
     case 'r': resized = 1; /* fallthrough */
     case 'm':

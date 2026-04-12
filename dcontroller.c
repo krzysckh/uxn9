@@ -9,8 +9,6 @@
 // left
 // right
 
-extern int do_exit;
-
 void
 btn_thread(void *arg)
 {
@@ -23,7 +21,7 @@ btn_thread(void *arg)
   if (fd < 0)
     sysfatal("devkbd");
 
-  while (!do_exit) {
+  while (uxn->running) {
     if ((nread = read(fd, b, sizeof(b)-1))) {
       bv = b;
       lock(&uxn->l);
@@ -33,7 +31,7 @@ btn_thread(void *arg)
 loop: while (*bv) {
         switch (*bv) {
         case 'c':
-          if (utfrune(bv, Kdel)) exitall(nil);
+          if (utfrune(bv, Kdel)) exitall(uxn, nil);
           break;
         case 'k': /* keydown */
           bev = 1;
@@ -101,7 +99,7 @@ loop: while (*bv) {
   }
 
   close(fd);
-  threadexitsall(nil);
+  // threadexitsall(nil);
 }
 
 // TODO: maybe move the start of btn_thread here

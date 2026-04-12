@@ -105,8 +105,8 @@ handle_quit(void *arg)
   unlock(&uxn->l);
   if (DEV(SYSTEM_STATE)) {
     if (0x7f&DEV(SYSTEM_STATE))
-      exitall("non-normal termination");
-    exitall(nil);
+      exitall(uxn, "non-normal termination");
+    exitall(uxn, nil);
   }
 }
 
@@ -114,6 +114,7 @@ static void
 system_state(Uxn *uxn)
 {
   proccreate(handle_quit, uxn, mainstacksize);
+  // handle_quit(uxn);
 }
 
 static void

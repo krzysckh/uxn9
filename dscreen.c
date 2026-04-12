@@ -206,6 +206,7 @@ screen_sprite(Uxn *uxn)
         tx = x+j, ty = (y+(flipyp?7-i:i));
         if (ty < window_height && tx < window_width)
           if (cur || color % 5) /* why */
+          // if (cur)
             target[ty*window_width + tx] = BLEND(cur, color);
       }
     }
@@ -242,46 +243,57 @@ screen_pixel(Uxn *uxn)
         *target = layer ? fg : bg ;
   WINSIZES;
   u16int x = DEV2(SCREEN_X), y = DEV2(SCREEN_Y);
-  int i = x, j = y;
+  int i = y, j = x;
 
   if (fillp) {
     for (; flipyp ? i >=0 : i < window_height; flipyp ? i-- : i++)
       for (j = x; flipxp ? j >=0 : j < window_width; flipxp? j-- : j++)
         if (i < window_height && j < window_width)
           target[(i*window_width)+j] = color;
-  } else
+#ifdef USE_SMART_DRAWING
+    minx = 0, miny = 0, maxx = 0xffff, maxy = 0xffff;
+    /*
+    minx = MIN(flipxp ? 0 : window_width, minx),
+         miny = MIN(flipyp ? 0 : window_height, miny),
+         maxx = MAX(flipxp ? 0 : window_width, maxx),
+         maxy = MAX(flipyp ? 0 : window_height, maxy);
+         */
+#endif
+  } else {
     if (y < window_height && x < window_width)
       target[(y*window_width)+x] = color;
 
-  if (autoX) SDEV2(SCREEN_X, x+1);
-  if (autoY) SDEV2(SCREEN_Y, y+1);
-
+    if (autoX) SDEV2(SCREEN_X, x+1);
+    if (autoY) SDEV2(SCREEN_Y, y+1);
 #ifdef USE_SMART_DRAWING
-  minx = 0, miny = 0, maxx = 0xffff, maxy = 0xffff;
+    minx = MIN(x, minx), miny = MIN(y, miny), maxx = MAX(x+1, maxx), maxy = MAX(y+1, maxy);
 #endif
+  }
+
 }
 
-int do_exit = 0;
-
 void
-exitall(char *mesg)
+exitall(Uxn *uxn, char *mesg)
 {
-  do_exit = 1;
+  uxn->running = 0;
+  print("exit message: %s\n", mesg);
+
   // postnote(PNPROC, threadpid(pidb), "shutdown");
   // postnote(PNPROC, threadpid(pidm), "shutdown");
-  threadexitsall(mesg);
+
+  // threadexitsall(mesg);
 }
 
 void
 screen_main_loop(Uxn *uxn)
 {
-  u16int run = 0x00ff;
+  // u16int run = 0x00ff;
   vlong target_timeout_ns = 1000000000/TARGET_FPS, was, slp;
 
   center_window(uxn);
   update_window_size(uxn);
 
-  while (do_exit == 0) {
+  while (uxn->running) {
     lock(&uxn->l);
 
     if (resized) {
@@ -295,7 +307,7 @@ screen_main_loop(Uxn *uxn)
     redraw(uxn);
 
     slp = target_timeout_ns - (nsec() - was);
-    if (slp)
+    if (slp > 0)
       sleep(slp/1000000);
   }
 }
