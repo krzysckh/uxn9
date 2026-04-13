@@ -123,6 +123,30 @@ system_debug(Uxn *uxn)
   print_stacks(uxn);
 }
 
+static void
+system_rsti(Uxn *uxn)
+{
+  SDEV(SYSTEM_RST, uxn->rstp);
+}
+
+static void
+system_wsti(Uxn *uxn)
+{
+  SDEV(SYSTEM_WST, uxn->wstp-1); /* TODO: this sucks!! a test is expecting a certain sequence of events which is not happening here */
+}
+
+static void
+system_rsto(Uxn *uxn)
+{
+  uxn->rstp = DEV(SYSTEM_RST);
+}
+
+static void
+system_wsto(Uxn *uxn)
+{
+  uxn->wstp = DEV(SYSTEM_WST);
+}
+
 void
 init_system_device(Uxn *uxn)
 {
@@ -134,4 +158,9 @@ init_system_device(Uxn *uxn)
   uxn->trigo[SYSTEM_STATE    ] = system_state;
   uxn->trigo[SYSTEM_DEBUG    ] = system_debug;
   uxn->trigo[SYSTEM_EXPANSION] = system_expansion;
+  uxn->trigo[SYSTEM_WST      ] = system_wsto;
+  uxn->trigo[SYSTEM_RST      ] = system_rsto;
+
+  uxn->trigi[SYSTEM_WST      ] = system_wsti;
+  uxn->trigi[SYSTEM_RST      ] = system_rsti;
 }

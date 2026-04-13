@@ -6,6 +6,9 @@
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #define MAX(a,b) ((a)>(b)?(a):(b))
 
+#define AT_(place, width, x, y) place[((y)*(width))+x]
+#define AT(place, x, y) AT_(place, window_width, x, y)
+
 #define BLEND(color, c) blending[color][c]
 
 #define _window_width  (DEV2(SCREEN_WIDTH))
@@ -238,35 +241,35 @@ screen_pixel(Uxn *uxn)
         color   = 0b11&dat,
         fillp   = 0b10000000&dat,
         layer   = 0b1000000&dat,
-        flipxp  = 0b100000&dat,
-        flipyp  = 0b10000&dat,
-        *target = layer ? fg : bg ;
+        flipyp  = 0b100000&dat,
+        flipxp  = 0b10000&dat,
+        *target = layer ? fg : bg;
   WINSIZES;
   u16int x = DEV2(SCREEN_X), y = DEV2(SCREEN_Y);
   int i = y, j = x;
 
   if (fillp) {
-    for (; flipyp ? i >=0 : i < window_height; flipyp ? i-- : i++)
-      for (j = x; flipxp ? j >=0 : j < window_width; flipxp? j-- : j++)
+    for (; flipyp ? i >= 0 : i < window_height; flipyp ? i-- : i++)
+      for (j = x; flipxp ? j >= 0 : j < window_width; flipxp? j-- : j++)
         if (i < window_height && j < window_width)
-          target[(i*window_width)+j] = color;
+          AT(target, j, i) = color;
 #ifdef USE_SMART_DRAWING
-    minx = 0, miny = 0, maxx = 0xffff, maxy = 0xffff;
-    /*
-    minx = MIN(flipxp ? 0 : window_width, minx),
-         miny = MIN(flipyp ? 0 : window_height, miny),
-         maxx = MAX(flipxp ? 0 : window_width, maxx),
-         maxy = MAX(flipyp ? 0 : window_height, maxy);
-         */
+    // minx = 0, miny = 0, maxx = 0xffff, maxy = 0xffff;
+    minx = MIN(flipxp ? 0 : x, minx),
+         miny = MIN(flipyp ? 0 : y, miny),
+         maxx = MAX(flipxp ? 0 : x, maxx),
+         maxy = MAX(flipyp ? 0 : y, maxy);
 #endif
   } else {
     if (y < window_height && x < window_width)
-      target[(y*window_width)+x] = color;
+      AT(target, x, y) = color;
+      //target[(y*window_width)+x] = color;
 
     if (autoX) SDEV2(SCREEN_X, x+1);
     if (autoY) SDEV2(SCREEN_Y, y+1);
 #ifdef USE_SMART_DRAWING
     minx = MIN(x, minx), miny = MIN(y, miny), maxx = MAX(x+1, maxx), maxy = MAX(y+1, maxy);
+    //minx = 0, miny = 0, maxx = 0xffff, maxy = 0xffff;
 #endif
   }
 
