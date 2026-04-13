@@ -47,7 +47,6 @@ console_main_loop(void *arg)
   unlock(&uxn->l);
 
   while (run) {
-    print("will rea bc run is %d\n", uxn->running);
     n = read(0, &c, 1);
     if (!n) break;
     lock(&uxn->l);
