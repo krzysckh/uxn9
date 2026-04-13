@@ -150,6 +150,7 @@ set_new_window_size(Uxn *uxn)
 
   if (fg == nil || bg == nil || sbuf == nil)
     sysfatal("malloc");
+  minx = 0, miny = 0, maxx = 0xffff, maxy = 0xffff;
 }
 
 static void

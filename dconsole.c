@@ -22,7 +22,7 @@ console_main_loop(void *arg)
 {
   Uxn *uxn = arg;
   u16int n = 0;
-  char *carg, c;
+  char *carg, c, run = 1;
   lock(&uxn->l);
   while (console_argc--) {
     carg = console_argv[n++];
@@ -43,13 +43,18 @@ console_main_loop(void *arg)
     }
   }
 
+  run = uxn->running;
   unlock(&uxn->l);
 
-  while ((n = read(0, &c, 1))) {
+  while (run) {
+    print("will rea bc run is %d\n", uxn->running);
+    n = read(0, &c, 1);
+    if (!n) break;
     lock(&uxn->l);
     SDEV(CONSOLE_TYPE, 1);
     SDEV(CONSOLE_READ, c);
     RUN();
+    run = uxn->running;
     unlock(&uxn->l);
   }
 }

@@ -100,9 +100,16 @@ system_blue(Uxn *uxn)
 static void
 handle_quit(void *arg)
 {
+  extern u8int uxnclip;
+
   Uxn *uxn = (Uxn *)arg;
-  lock(&uxn->l); // wait until current vector is finished
-  unlock(&uxn->l);
+  if (!uxnclip) {
+    /* wait until current vector is finished,
+     * but do that only in gui mode, as uxncli does not spawn any more threads
+     */
+    lock(&uxn->l);
+    unlock(&uxn->l);
+  }
   if (DEV(SYSTEM_STATE)) {
     if (0x7f&DEV(SYSTEM_STATE))
       exitall(uxn, "non-normal termination");
@@ -113,7 +120,11 @@ handle_quit(void *arg)
 static void
 system_state(Uxn *uxn)
 {
-  proccreate(handle_quit, uxn, mainstacksize);
+  extern u8int uxnclip;
+  if (uxnclip)
+    handle_quit(uxn);
+  else
+    proccreate(handle_quit, uxn, mainstacksize);
   // handle_quit(uxn);
 }
 
