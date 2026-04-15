@@ -78,9 +78,9 @@ update_screen_buffer(Uxn *uxn)
       if (DEBUG_SMART_DRAWING)
         sel = 2;
 
-      sbuf[pt*3]     = colors[sel*3];
-      sbuf[pt*3 + 1] = colors[sel*3 + 1];
-      sbuf[pt*3 + 2] = colors[sel*3 + 2];
+      sbuf[pt*4]     = colors[sel*3];
+      sbuf[pt*4 + 1] = colors[sel*3 + 1];
+      sbuf[pt*4 + 2] = colors[sel*3 + 2];
     }
   }
 
@@ -98,8 +98,8 @@ redraw(Uxn *uxn)
 
   update_screen_buffer(uxn);
 
-  if (loadimage(img, img->r, (void*)sbuf, window_width*window_height*3) < 0)
-    sysfatal("loadimage");
+  if (loadimage(img, img->r, (void*)sbuf, window_width*window_height*4) < 0)
+    sysfatal("loadimage %r");
 
   //drawop(screen, Rect(xr, yr, w+xr, h+yr), i, nil, i->r.min, 0);
   //draw(screen, Rect(xr, yr, window_width+xr, window_height+yr), img, nil, img->r.min);
@@ -121,7 +121,7 @@ update_window_size(Uxn *uxn)
   r = Rect(0, 0, window_width, window_height);
   if (img)
     freeimage(img);
-  img = allocimage(display, r, RGB24, 0, 0);
+  img = allocimage(display, r, XRGB32, 0, 0);
   if (img == nil)
     sysfatal("allocimage");
 
@@ -144,7 +144,7 @@ set_new_window_size(Uxn *uxn)
   if (fg != nil)   free(fg);
   if (bg != nil)   free(bg);
 
-  sbuf = mallocz(window_width*window_height*3, 1);
+  sbuf = mallocz(window_width*window_height*4, 1);
   bg   = mallocz(window_width*window_height, 1);
   fg   = mallocz(window_width*window_height, 1);
 
